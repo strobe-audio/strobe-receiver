@@ -9,6 +9,18 @@ Janis.Player.play song
 
 ```
 
+Avahi
+-----
+
+The broadcaster lookup is done using Avahi through [dnssd_erlang][]
+
+This requires the following software (on Ubuntu):
+
+    apt-get install avahi-daemon libavahi-compat-libdnssd-dev
+
+
+[dnssd_erlang]: https://github.com/benoitc/dnssd_erlang
+
 Jack
 ----
 

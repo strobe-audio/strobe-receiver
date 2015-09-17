@@ -14,7 +14,7 @@ defmodule Janis.Mixfile do
   #
   # Type `mix help compile.app` for more information
   def application do
-    [applications: [:porcelain, :logger, :reconnaissance, :resource_discovery],
+    [applications: [:porcelain, :logger, :dnssd],
      mod: {Janis, []}]
   end
 
@@ -29,8 +29,8 @@ defmodule Janis.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     [ {:porcelain, "~> 2.0"},
-      {:resource_discovery, github: "erlware/resource_discovery"},
-      {:reconnaissance, github: "wooga/reconnaissance"}
+      {:socket, "~> 0.3.0"},
+      {:dnssd, github: "benoitc/dnssd_erlang"}
     ]
   end
 end
