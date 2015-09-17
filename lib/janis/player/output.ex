@@ -12,7 +12,7 @@ defmodule Janis.Player.Output do
     socket = case :gen_tcp.connect(address, port, [:inet, :binary, active: true]) do
       {:ok, socket} -> socket
       {:error, :econnrefused} ->
-        Logger.warn "No audio output..."
+        Logger.warn "============= No audio output... ==============="
         nil
     end
     {:ok, socket}
