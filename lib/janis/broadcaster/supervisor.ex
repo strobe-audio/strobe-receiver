@@ -9,8 +9,9 @@ defmodule Janis.Broadcaster.Supervisor do
 
   def init({service, address, port, config}) do
     children = [
-      worker(Janis.Broadcaster.Monitor, [service, address, port, config], []),
-      worker(Janis.Broadcaster.Socket, [service, address, port, config], [])
+      worker(Janis.Broadcaster.SNTP, [service, address, port, config], []),
+      worker(Janis.Broadcaster.Socket, [service, address, port, config], []),
+      worker(Janis.Broadcaster.Monitor, [service, address, port, config], [])
     ]
     supervise(children, strategy: :one_for_one)
   end

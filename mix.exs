@@ -30,7 +30,8 @@ defmodule Janis.Mixfile do
   defp deps do
     [ {:porcelain, "~> 2.0"},
       {:socket, "~> 0.3.0"},
-      {:dnssd, github: "benoitc/dnssd_erlang"}
+      {:dnssd, github: "benoitc/dnssd_erlang"},
+      {:poison, "~> 1.5"},
     ]
   end
 end
