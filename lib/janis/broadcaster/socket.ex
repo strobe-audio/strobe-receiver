@@ -7,10 +7,15 @@ defmodule Janis.Broadcaster.Socket do
   end
 
   def init({service, address, port, config} = broadcaster) do
-    # server = {List.to_string(:inet.ntoa(address)), port}
     Logger.info "Connecting to websocket #{inspect broadcaster}"
+    Process.flag(:trap_exit, true)
     %Socket.Web{} = socket = Socket.Web.connect! {address, port}, path: socket_path_with_id(config)
     {:ok, socket}
+  end
+
+  def terminate(reason, state) do
+    Logger.info "Stopping Broadcaster.Socket"
+    :ok
   end
 
   defp socket_path_with_id(config) do

@@ -19,6 +19,7 @@ defmodule Janis do
 
   def broadcaster_disconnect(service) do
     Logger.info "Broadcaster DISCONNECT #{inspect service}"
+    Janis.Broadcasters.stop_broadcaster(service)
   end
 
   def receiver_id do
