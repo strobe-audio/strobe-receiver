@@ -21,7 +21,6 @@ defmodule Janis.Broadcaster.Monitor do
   ### GenServer API
 
   def start_link(service, address, port, config) do
-    Logger.info "!!Starting Broadcaster.Monitor"
     GenServer.start_link(__MODULE__, {service, address, port, config}, name: @monitor_name)
   end
 
@@ -34,6 +33,7 @@ defmodule Janis.Broadcaster.Monitor do
 
   def terminate(reason, state) do
     Logger.info "Stopping Broadcaster.Monitor"
+    Janis.Player.stop_player
     :ok
   end
 
@@ -136,7 +136,6 @@ defmodule Janis.Broadcaster.Monitor do
     end
 
     def terminate(reason, state) do
-      Logger.debug "Monitor terminate #{inspect reason} #{inspect state}"
       :ok
     end
   end

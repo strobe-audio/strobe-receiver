@@ -27,13 +27,20 @@ defmodule Janis.Broadcaster.Socket do
     def loop({_parent, socket} = state) do
       receive do
       after 0 ->
-        Socket.Stream.recv!(socket) |> process_event(state)
+        Logger.debug "Waiting for message..."
+        Socket.Web.recv!(socket) |> process_event(state)
       end
       loop(state)
     end
 
+    defp process_event({:text, msg}, {parent, _socket} = state) do
+      event = Poison.decode! msg, as: Event
+      GenServer.cast(parent, {:event, event})
+    end
+
     defp process_event(event, {parent, _socket} = state) do
-      Logger.deug "Got event #{inspect event}"
+      Logger.debug "Got event #{inspect event}"
+      GenServer.cast(parent, {:event, event})
     end
   end
 
@@ -61,9 +68,19 @@ defmodule Janis.Broadcaster.Socket do
 
   def handle_cast({:join, %{latency: latency} = connection}, socket) do
     msg = Poison.encode!(event(%Event{event: "phx_join", ref: "1", payload: connection}))
-    IO.inspect [:join, msg]
     Socket.Web.send! socket, { :text, msg }
     {:noreply, socket}
+  end
+
+  def handle_cast({:event, %Event{event: "join_zone", payload: config} = event}, state) do
+    Logger.debug "JOIN ZONE #{inspect config}"
+    join_zone(config)
+    {:noreply, state}
+  end
+
+  def handle_cast({:event, event}, state) do
+    Logger.debug "Event #{inspect event}"
+    {:noreply, state}
   end
 
   defp event(%Event{} = event) do
@@ -80,5 +97,11 @@ defmodule Janis.Broadcaster.Socket do
 
   defp id do
     Janis.receiver_id
+  end
+
+  defp join_zone(%{"address" => address, "port" => port, "interval" => packet_interval, "size" => packet_size}) do
+    address = List.to_tuple(address)
+    IO.inspect [:join, address, port, packet_interval, packet_size]
+    {:ok, pid} = Janis.Player.start_player({address, port}, {packet_interval, packet_size})
   end
 end

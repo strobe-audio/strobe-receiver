@@ -31,6 +31,7 @@ defmodule Janis.Player.Buffer do
 
   def init(stream_info) do
     Logger.debug "Player.Buffer up"
+    Process.flag(:trap_exit, true)
     {:ok, %S{stream_info: stream_info}}
   end
 
@@ -79,6 +80,11 @@ defmodule Janis.Player.Buffer do
   def player_start_playback(player) do
     Logger.debug "Player start playback..."
     Janis.Player.Player.start_playback(player)
+  end
+
+  def terminate(reason, state) do
+    Logger.info "Stopping #{__MODULE__}"
+    :ok
   end
 end
 

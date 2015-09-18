@@ -9,8 +9,8 @@ defmodule Janis.Supervisor do
     children = [
       worker(Janis.DNSSD, []),
       worker(Janis.Audio, []),
+      supervisor(Janis.Player, []),
       supervisor(Janis.Broadcasters, [])
-      # worker(Janis.Resources, []),
     ]
     supervise(children, strategy: :one_for_one)
   end

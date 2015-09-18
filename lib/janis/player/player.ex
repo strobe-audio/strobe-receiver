@@ -22,6 +22,7 @@ defmodule Janis.Player.Player do
 
   def init([stream_info, buffer]) do
     Logger.debug "Player.Player up #{inspect stream_info}"
+    Process.flag(:trap_exit, true)
     Janis.Player.Buffer.link_player(buffer, self)
     {:ok, %S{buffer: buffer, stream_info: stream_info}}
   end
@@ -37,7 +38,12 @@ defmodule Janis.Player.Player do
 
   def handle_cast({:play, data}, state) do
     # Logger.debug "Play #{inspect data}"
-    Janis.Player.Output.send(data)
+    Janis.Audio.play(data)
     {:noreply, state}
+  end
+
+  def terminate(reason, state) do
+    Logger.info "Stopping #{__MODULE__}"
+    :ok
   end
 end

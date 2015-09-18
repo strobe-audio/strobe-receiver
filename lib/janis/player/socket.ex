@@ -15,6 +15,7 @@ defmodule Janis.Player.Socket do
 
   def init([ {ip, port}, stream_info, buffer ]) do
     Logger.debug "Player.Socket up #{inspect {ip, port}}"
+    Process.flag(:trap_exit, true)
     {:ok, socket} = :gen_udp.open port, [:binary, active: true, ip: ip, add_membership: {ip, {0, 0, 0, 0}}, reuseaddr: true]
     # :ok = :gen_udp.controlling_process(socket, self)
     {:ok, {socket, buffer, stream_info}}
@@ -29,5 +30,10 @@ defmodule Janis.Player.Socket do
   def handle_info(msg, state) do
     Logger.debug "Got message #{inspect msg}"
     {:noreply, state}
+  end
+
+  def terminate(reason, state) do
+    Logger.info "Stopping #{__MODULE__}"
+    :ok
   end
 end
