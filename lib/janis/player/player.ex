@@ -27,9 +27,15 @@ defmodule Janis.Player.Player do
     {:ok, %S{buffer: buffer, stream_info: stream_info}}
   end
 
-  def handle_cast(:start_playback, %S{buffer: buffer, timer: nil, stream_info: {interval, size}} = state) do
-    {:ok, timer} = Janis.Looper.start_link(buffer, interval, size)
-    {:noreply, %S{ state | timer: timer }}
+  def handle_cast(:start_playback, %S{timer: nil} = state) do
+    state = launch_timer(state)
+    {:noreply, state}
+  end
+
+  def handle_cast(:start_playback, %S{timer: timer} = state) do
+    Process.exit(timer, :kill)
+    state = launch_timer(state)
+    {:noreply, state}
   end
 
   def handle_cast(:start_playback, state) do
@@ -40,6 +46,11 @@ defmodule Janis.Player.Player do
     # Logger.debug "Play #{inspect data}"
     Janis.Audio.play(data)
     {:noreply, state}
+  end
+
+  defp launch_timer(%S{buffer: buffer, stream_info: {interval, size}} = state) do
+    {:ok, timer} = Janis.Looper.start_link(buffer, interval, size)
+    %S{ state | timer: timer }
   end
 
   def terminate(reason, state) do

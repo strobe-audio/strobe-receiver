@@ -29,7 +29,7 @@ defmodule Janis.Audio.PulseAudioTCP do
   end
 
   defp link_socket(socket) do
-    :erlang.link(socket)
+    Process.link(socket)
     socket
   end
 

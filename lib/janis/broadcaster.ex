@@ -1,7 +1,7 @@
-defmodule Janis.Broadcasters do
+defmodule Janis.Broadcaster do
   use Supervisor
 
-  @supervisor_name Janis.Broadcasters
+  @supervisor_name Janis.Broadcaster
   @child_name Janis.Broadcaster
 
   def start_link do
@@ -42,6 +42,10 @@ defmodule Janis.Broadcasters do
   def terminate_broadcaster(supervisor, broadcaster) do
     IO.inspect [:terminate_broadcaster, broadcaster]
     :ok = Supervisor.terminate_child(supervisor, broadcaster)
+  end
+
+  def translate_packet({_timestamp, _data} = packet) do
+    GenServer.call(Janis.Broadcaster.Monitor, {:translate_packet, packet})
   end
 
   def init(:ok) do

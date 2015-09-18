@@ -80,12 +80,13 @@ defmodule Janis.Looper do
   end
 
   def next_frame({t, n, d, _timestamp, _data, buffer, player}) do
-    {:ok, {timestamp, data}} = Janis.Player.Buffer.get(buffer)
-    {:ok, delta} = Janis.Monitor.time_delta
-    time = round((timestamp - delta)/1000)
-    now = Janis.milliseconds
-    # Logger.debug "next_frame #{inspect time} #{time - now}"
-    {t, n+1, d, time, data, buffer, player}
+    Logger.debug "get #{Janis.milliseconds}"
+    case Janis.Player.Buffer.get(buffer) do
+      {:ok, {timestamp, data}} ->
+        {t, n+1, d, timestamp, data, buffer, player}
+      {:error, _reason} ->
+        Process.exit(self, :kill)
+    end
   end
 
 

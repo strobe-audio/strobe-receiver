@@ -46,7 +46,12 @@ defmodule Janis.Player.Buffer do
 
   def handle_call(:get, _from, %S{queue: queue} = state) do
     {packet, queue} = :queue.out(queue)
-    {:reply, next_packet(packet), %S{state | queue: queue}}
+    case next_packet(packet) do
+      {:ok, _value} = success ->
+        {:reply, success, %S{state | queue: queue}}
+      {:error, _reason} = err ->
+        {:reply, err, %S{state | queue: queue, status: :stopped}}
+    end
   end
 
   def next_packet({:value, packet}) do
@@ -55,7 +60,7 @@ defmodule Janis.Player.Buffer do
 
   def next_packet(:empty) do
     Logger.warn "Buffer underrun"
-    {:ok, <<>>}
+    {:error, :empty}
   end
 
   def put_packet(queue, packet, player, :stopped) do
@@ -64,6 +69,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def put_packet(queue, packet, player, :playing) do
+    Logger.debug "put #{Janis.milliseconds}"
     case :queue.len(queue) do
       l when l == 0 ->
         Logger.warn "Low buffer! #{inspect (l + 1)}"
@@ -71,7 +77,8 @@ defmodule Janis.Player.Buffer do
         Logger.warn "Overflow buffer! #{inspect (l + 1)}"
       _ ->
     end
-    {:queue.in(packet, queue), :playing}
+    translated_packet = {timestamp, _data} = Janis.Broadcaster.translate_packet(packet)
+    {:queue.in(translated_packet, queue), :playing}
   end
 
   def player_start_playback(nil) do

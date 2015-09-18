@@ -32,10 +32,10 @@ defmodule Janis.Broadcaster.SNTP do
     >>
     :ok = :gen_udp.send(socket, address, port, packet)
 
-    {:ok, {originate, receipt, reply, finish}} = wait_response(socket)
-    :ok = :gen_udp.close(socket)
+    response = wait_response(socket)
 
-    {:reply, {:ok, {originate, receipt, reply, finish}}, %{state | sync_count: count + 1}}
+    :ok = :gen_udp.close(socket)
+    {:reply, response, %{state | sync_count: count + 1}}
   end
 
   defp wait_response(socket) do
@@ -53,5 +53,9 @@ defmodule Janis.Broadcaster.SNTP do
        reply::size(64)-little-signed-integer
     >> = data
     {:ok, {originate, receipt, reply, now}}
+  end
+
+  defp parse_response({:error, :timeout}) do
+    {:error, :timeout}
   end
 end

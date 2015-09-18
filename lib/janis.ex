@@ -14,12 +14,12 @@ defmodule Janis do
 
   def broadcaster_connect(service, address, port, config) do
     Logger.info "Broadcaster ONLINE     #{address}:#{port} #{inspect config}"
-    Janis.Broadcasters.start_broadcaster(service, address, port, config)
+    Janis.Broadcaster.start_broadcaster(service, address, port, config)
   end
 
   def broadcaster_disconnect(service) do
     Logger.info "Broadcaster DISCONNECT #{inspect service}"
-    Janis.Broadcasters.stop_broadcaster(service)
+    Janis.Broadcaster.stop_broadcaster(service)
   end
 
   def receiver_id do

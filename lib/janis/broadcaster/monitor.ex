@@ -55,6 +55,11 @@ defmodule Janis.Broadcaster.Monitor do
     {:reply, {:ok, delta}, state}
   end
 
+  def handle_call({:translate_packet, {timestamp, data}}, _from, %S{delta: delta} = state) do
+    translated_timestamp = round((timestamp - delta)/1000)
+    {:reply, {translated_timestamp, data}, state}
+  end
+
   def handle_cast({:append_measurement, measurement}, %S{measurement_count: 0} = state) do
     # First measurement! Join receiver channel!
     %S{latency: latency} = state = append_measurement(measurement, state)
@@ -104,11 +109,16 @@ defmodule Janis.Broadcaster.Monitor do
     end
 
     defp measure_sync(%{measurements: measurements, count: count, broadcaster: broadcaster} = state) when count > 0  do
-      {:ok, {start, receipt, reply, finish}} = sync_exchange(broadcaster)
-      latency = (finish - start) / 2
-      # https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
-      delta = round(((receipt - start) + (reply - finish)) / 2)
-      %{ state | count: count - 1,  measurements: [{latency, delta} | measurements]}
+      case sync_exchange(broadcaster) do
+        {:ok, {start, receipt, reply, finish}} ->
+          latency = (finish - start) / 2
+          # https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
+          delta = round(((receipt - start) + (reply - finish)) / 2)
+          %{ state | count: count - 1,  measurements: [{latency, delta} | measurements]}
+        {:error, _reason} = err ->
+          Logger.warn "Error measuring time sync #{inspect err}"
+          state
+      end
     end
 
     # http://www.mine-control.com/zack/timesync/timesync.html
