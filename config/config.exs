@@ -14,7 +14,7 @@ config :logger, :console,
   level: :debug,
   format: "$date $time [$level] $metadata$message\n",
   # I don't want 'back pressure' from the logger
-  sync_threshold: 10_000,
+  sync_threshold: 1_000_000,
   metadata: [],
   colors: [info: :green]
 
