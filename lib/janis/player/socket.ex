@@ -23,7 +23,14 @@ defmodule Janis.Player.Socket do
 
   def handle_info({:udp, __socket, __addr, __port, data}, {_socket, buffer, _stream_info} = state) do
     << _count::size(64)-little-unsigned-integer, timestamp::size(64)-little-signed-integer, audio::binary >> = data
-    Janis.Player.Buffer.put(buffer, {timestamp, audio})
+    case {timestamp, audio} do
+      {0, <<>>}  ->
+        Logger.debug "stp #{Janis.milliseconds}"
+        Janis.Player.Buffer.stop(buffer)
+      _ ->
+        # Logger.debug "rec #{Janis.milliseconds}"
+        Janis.Player.Buffer.put(buffer, {timestamp, audio})
+    end
     {:noreply, state}
   end
 

@@ -32,6 +32,7 @@ defmodule Janis.Mixfile do
       {:socket, "~> 0.3.0"},
       {:dnssd, github: "benoitc/dnssd_erlang"},
       {:poison, "~> 1.5"},
+      {:poolboy, github: "devinus/poolboy"},
     ]
   end
 end

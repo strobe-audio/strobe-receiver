@@ -56,7 +56,7 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   def handle_call({:translate_packet, {timestamp, data}}, _from, %S{delta: delta} = state) do
-    translated_timestamp = round((timestamp - delta)/1000)
+    translated_timestamp = (timestamp - delta)
     {:reply, {translated_timestamp, data}, state}
   end
 
@@ -81,8 +81,10 @@ defmodule Janis.Broadcaster.Monitor do
       _ -> latency
     end
     avg_delta = round (((measurement_count * delta) + mdelta) / new_count)
-
-    collect_measurements(%S{ state | measurement_count: new_count, latency: max_latency, delta: avg_delta })
+    state = %S{ state | measurement_count: new_count, latency: max_latency, delta: avg_delta }
+    Logger.info "New time delta measurement #{delta} -> #{avg_delta} (#{avg_delta - delta})"
+    collect_measurements(state)
+    state
   end
 
   defmodule Collector do

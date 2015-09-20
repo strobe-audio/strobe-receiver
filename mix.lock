@@ -1,4 +1,5 @@
 %{"dnssd": {:git, "git://github.com/benoitc/dnssd_erlang.git", "9b2fdb7ff9618102d82f04e4c68ce191c9aa15ba", []},
   "poison": {:hex, :poison, "1.5.0"},
+  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "3bb48a893ff5598f7c73731ac17545206d259fac", []},
   "porcelain": {:hex, :porcelain, "2.0.0"},
   "socket": {:hex, :socket, "0.3.0"}}
