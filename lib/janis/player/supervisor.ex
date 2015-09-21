@@ -17,7 +17,8 @@ defmodule Janis.Player.Supervisor do
     children = [
       :poolboy.child_spec(Janis.Player.EmitterPool, pool_options, [
         interval: _packet_interval,
-        packet_size: _packet_size
+        packet_size: _packet_size,
+        pool: Janis.Player.EmitterPool
       ]),
       worker(Janis.Player.Buffer, [stream_info, Janis.Player.Buffer]),
       worker(Janis.Player.Socket, [address, stream_info, Janis.Player.Buffer]),

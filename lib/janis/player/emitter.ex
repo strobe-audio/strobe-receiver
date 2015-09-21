@@ -10,14 +10,14 @@ defmodule Janis.Player.Emitter do
     :proc_lib.start_link(__MODULE__, :init, [opts])
   end
 
-  def init([interval: packet_interval, packet_size: packet_size] = opts) do
+  def init([interval: packet_interval, packet_size: packet_size, pool: pool] = opts) do
     Logger.debug "Launched emitter #{inspect opts}"
     :proc_lib.init_ack({:ok, self})
 
     state = {
-      {0, 0, 3000},                  # timing information
-      {},                            # packet
-      {packet_interval, packet_size} # stream info
+      {0, 0, 3000},                        # timing information
+      {},                                  # packet
+      {packet_interval, packet_size, pool} # config
     }
     wait(state)
   end
@@ -37,11 +37,11 @@ defmodule Janis.Player.Emitter do
     {:noreply, state}
   end
 
-  def start(packet, {{t, n, d}, _packet, _stream} = state) do
+  def start(packet, {{t, n, d}, _packet, _config} = state) do
     # Logger.disable(self)
     {t, _} = packet
     Logger.debug "Start emitter #{t - current_time}"
-    state = {{Janis.microseconds, n, d}, packet, _stream}
+    state = {{Janis.microseconds, n, d}, packet, _config}
     test_packet state
   end
 
@@ -52,7 +52,7 @@ defmodule Janis.Player.Emitter do
     end
   end
 
-  def test_packet({{now, _, d}, {timestamp, _data}, _stream} = state) do
+  def test_packet({{now, _, d}, {timestamp, _data}, _config} = state) do
     case timestamp - now do
       x when x <= 1 ->
         play_frame(state)
@@ -65,9 +65,9 @@ defmodule Janis.Player.Emitter do
 
   @jitter 250
 
-  def loop_tight({{t, n, d}, {timestamp, _data}, _stream}) do
+  def loop_tight({{t, n, d}, {timestamp, _data}, _config}) do
     now = current_time
-    state = {{now, n, d}, {timestamp, _data}, _stream}
+    state = {{now, n, d}, {timestamp, _data}, _config}
     case timestamp - now do
       x when x <= @jitter ->
         play_frame(state)
@@ -77,8 +77,8 @@ defmodule Janis.Player.Emitter do
     end
   end
 
-  def play_frame({_loop, {timestamp, data}, _stream} = state) do
     Logger.debug "Play frame.. #{current_time - timestamp}"
+  def play_frame({_loop, {timestamp, data}, {_pi, _ps, pool} = _config} = state) do
     send_data = case current_time - timestamp do
       d when d <= 0 ->
         data
@@ -101,8 +101,8 @@ defmodule Janis.Player.Emitter do
 
     # loop(next_frame(state))
     Logger.debug "Check back into pool"
-    :poolboy.checkin(Janis.Player.EmitterPool, self)
-    wait({_loop, {}, _stream})
+    :poolboy.checkin(pool, self)
+    wait({_loop, {}, _config})
   end
 
   # One frame is 16 bits over 2 channels
@@ -113,7 +113,7 @@ defmodule Janis.Player.Emitter do
     round(Float.ceil(@frames_per_us * us)) * @bytes_per_frame
   end
 
-  def new_state({{t, n, d}, packet, stream}) do
+  def new_state({{t, n, d}, packet, config}) do
     m = n+1
     now = current_time
     delay = case d do
@@ -123,7 +123,7 @@ defmodule Janis.Player.Emitter do
     if rem(m, 1000) == 0 do
       Logger.debug "#{now}, #{m}, #{delay}"
     end
-    {{now, m, delay}, packet, stream}
+    {{now, m, delay}, packet, config}
   end
 
   def current_time do
