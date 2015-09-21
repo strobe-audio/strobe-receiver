@@ -96,7 +96,7 @@ defmodule Janis.Player.Emitter do
 
     if byte_size(send_data) > 0 do
       # Logger.debug "PLAY #{byte_size(send_data)}"
-      # GenServer.cast(player, {:play, send_data})
+      Janis.Audio.play(send_data)
     end
 
     # loop(next_frame(state))
