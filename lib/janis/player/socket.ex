@@ -18,18 +18,19 @@ defmodule Janis.Player.Socket do
     Process.flag(:trap_exit, true)
     {:ok, socket} = :gen_udp.open port, [:binary, active: true, ip: ip, add_membership: {ip, {0, 0, 0, 0}}, reuseaddr: true]
     # :ok = :gen_udp.controlling_process(socket, self)
-    {:ok, {socket, buffer, stream_info}}
+    {:ok, {socket, nil, buffer, stream_info}}
   end
 
-  def handle_info({:udp, __socket, __addr, __port, data}, {_socket, buffer, _stream_info} = state) do
+  def handle_info({:udp, __socket, __addr, __port, data}, {_socket, _time, buffer, _stream_info} = state) do
     << _count::size(64)-little-unsigned-integer, timestamp::size(64)-little-signed-integer, audio::binary >> = data
-    case {timestamp, audio} do
+    state = case {timestamp, audio} do
       {0, <<>>}  ->
-        Logger.debug "stp #{Janis.milliseconds}"
+        # Logger.debug "stp #{Janis.milliseconds}"
         Janis.Player.Buffer.stop(buffer)
+        state
       _ ->
         # Logger.debug "rec #{Janis.milliseconds}"
-        Janis.Player.Buffer.put(buffer, {timestamp, audio})
+        put({timestamp, audio}, state)
     end
     {:noreply, state}
   end
@@ -42,5 +43,23 @@ defmodule Janis.Player.Socket do
   def terminate(reason, state) do
     Logger.info "Stopping #{__MODULE__}"
     :ok
+  end
+
+  defp put(packet, {_socket, nil, _buffer, _stream_info} = state) do
+    put!(packet, state)
+  end
+
+  defp put({timestamp, _data} = packet, {_socket, latest_timestamp, _buffer, _stream_info} = state) when timestamp > latest_timestamp  do
+    put!(packet, state)
+  end
+
+  defp put({timestamp, _data} = packet, {_socket, latest_timestamp, _buffer, _stream_info} = state) when timestamp <= latest_timestamp  do
+    Logger.info "Ignoring packet with timestamp #{timestamp} #{timestamp - latest_timestamp}"
+    state
+  end
+
+  defp put!({timestamp, _data} = packet, {_socket, _ts, buffer, _stream_info} = state) do
+    Janis.Player.Buffer.put(buffer, packet)
+    {_socket, timestamp, buffer, _stream_info}
   end
 end
