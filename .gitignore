@@ -2,3 +2,5 @@
 /deps
 erl_crash.dump
 *.ez
+c_src/*.o
+priv_dir

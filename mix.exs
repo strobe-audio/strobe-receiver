@@ -5,9 +5,16 @@ defmodule Janis.Mixfile do
     [app: :janis,
      version: "0.0.1",
      elixir: "~> 1.0",
+     compilers: [:make, :elixir, :app],
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps]
+     deps: deps,
+     aliases: aliases]
+  end
+
+  defp aliases do
+    # Execute the usual mix clean and our Makefile clean task
+    [clean: ["clean", "clean.make"]]
   end
 
   # Configuration for the OTP application
@@ -34,5 +41,27 @@ defmodule Janis.Mixfile do
       {:poison, "~> 1.5"},
       {:poolboy, github: "devinus/poolboy"},
     ]
+  end
+end
+
+# mix compile.make
+defmodule Mix.Tasks.Compile.Make do
+  @shortdoc "Compiles c port driver"
+
+  def run(_) do
+    {result, _error_code} = System.cmd("make", [], stderr_to_stdout: true)
+    Mix.shell.info result
+    :ok
+  end
+end
+
+# mix clean.make
+defmodule Mix.Tasks.Clean.Make do
+  @shortdoc "Cleans helper in c_src"
+
+  def run(_) do
+    {result, _error_code} = System.cmd("make", ['clean'], stderr_to_stdout: true)
+    Mix.shell.info result
+    :ok
   end
 end
