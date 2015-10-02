@@ -12,20 +12,16 @@ defmodule Janis.Audio do
     GenServer.cast(@name, {:play, packet})
   end
 
-  def test do
-    {:ok, data} = File.open "../audio/17640-shubert-piano-quintet.raw", [:read], fn(file) ->
+  def test(n \\ 5) do
+    c = Enum.min [50, n]
+    {:ok, data} = File.open "../audio/176400-shubert-piano-quintet.raw", [:read], fn(file) ->
       IO.binread file, :all
     end
     now = Janis.microseconds
-    << packet::binary-size(3528), data::binary >> = data
-    play({now + 10000, packet})
-    << packet::binary-size(3528), data::binary >> = data
-    play({now + 12000, packet})
-    << packet::binary-size(3528), data::binary >> = data
-    play({now + 14000, packet})
-    << packet::binary-size(3528), data::binary >> = data
-    play({now + 16000, packet})
-    << packet::binary-size(3528), data::binary >> = data
-    play({now + 18000, packet})
+    Enum.each 0..c, fn(i) ->
+      skip_bytes = 3528*i
+      << _skip::binary-size(skip_bytes), packet::binary-size(3528), data::binary >> = data
+      play({now + (i * 2000), packet})
+    end
   end
 end
