@@ -84,17 +84,17 @@ static int audio_callback(const void* _input,
 	UNUSED(_input);
 
 	/* Roughly what we have to do here, ignoring any timing/resampling stuff:
-	 *
-	 *   - if we don't have active data
-	 *     - if we have a packet in the ring buffer (playback starting)
-	 *  		 - retrieve packet
-	 *  		 - set it as active - try again...
-	 *   - with active data
-	 *     - get enough frames from the active packet to satisfy the request
-	 *  		 - update the packet pointer to keep track of position
-	 *  		 - if the current packet doesn't have enough frames left, get the next...
-	 *  	 - send frame data to output
-	 */
+	**
+	**   - if we don't have active data
+	**     - if we have a packet in the ring buffer (playback starting)
+	**     - retrieve packet
+	**     - set it as active - try again...
+	**   - with active data
+	**     - get enough frames from the active packet to satisfy the request
+	**       - update the packet pointer to keep track of position
+	**       - if the current packet doesn't have enough frames left, get the next...
+	**     - send frame data to output
+	**/
 	if (context_has_data(context)) {
 		// printf("\rcontext has data\r\n");
 		packet = context->active_packet;
