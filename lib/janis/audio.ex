@@ -13,7 +13,7 @@ defmodule Janis.Audio do
   end
 
   def test do
-    {:ok, data} = File.open "../audio/song.raw", [:read], fn(file) ->
+    {:ok, data} = File.open "../audio/17640-shubert-piano-quintet.raw", [:read], fn(file) ->
       IO.binread file, :all
     end
     now = Janis.microseconds

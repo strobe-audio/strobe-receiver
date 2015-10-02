@@ -16,7 +16,6 @@
 #define PLAY_COMMAND  (1)
 /*
  * 3528 bytes = 1,764 short
- *
  */
 
 #define PACKET_SIZE   (1764)
@@ -31,8 +30,8 @@
 
 typedef struct timestamped_packet {
 	uint64_t timestamp;
-	uint16_t data_size;
-	uint16_t offset;
+	uint16_t len; // number of floats, not byte size
+	uint16_t offset;    // number of floats, not byte size
 	float    data[PACKET_SIZE];
 } timestamped_packet;
 
@@ -40,7 +39,7 @@ typedef struct audio_callback_context {
 	PaStream*           audio_stream;
 	int                 sample_size;
 	PaUtilRingBuffer    audio_buffer;
-	void						   *audio_buffer_data;
+	timestamped_packet *audio_buffer_data;
 	timestamped_packet *active_packet;
 } audio_callback_context;
 
@@ -52,23 +51,28 @@ typedef struct portaudio_state {
 
 void send_packet(timestamped_packet *packet, audio_callback_context *context, float *out, unsigned long frameCount)
 {
-	unsigned long len = frameCount * CHANNEL_COUNT * context->sample_size;
+	unsigned long requestedLen = frameCount * CHANNEL_COUNT;
+	/* unsigned long requestedBytes = requestedFloat * context->sample_size; */
+	unsigned long len = requestedLen;
 	uint16_t offset = 0;
-	if ((packet->offset + len) <= packet->data_size) {
+	if ((packet->offset + len) <= packet->len) {
 		offset = packet->offset + len;
 	} else {
-		len = packet->data_size - packet->offset;
-		offset = packet->data_size;
+		len = packet->len - packet->offset;
+		offset = packet->len;
 	}
-	printf("\rsending packet %lu [ %u -> %u ] %u %d\r\n", len, packet->offset, offset, packet->data_size, context->sample_size);
-	memcpy(out, (float *)(packet->data + packet->offset), len);
+	printf("\rsending packet %lu/%lu [ %u -> %u/%u ] [%f, %f]\r\n", len, requestedLen, packet->offset, offset, packet->len, *(packet->data + packet->offset), *(packet->data + packet->offset + 1));
+	memcpy(out, (float *)(packet->data + packet->offset), len* context->sample_size);
+	if (len < requestedLen) {
+		memset(out+len+1, 0, (requestedLen - len) * context->sample_size);
+	}
 	packet->offset = offset;
 }
 
 bool context_has_data(audio_callback_context *context)
 {
 	timestamped_packet* packet = context->active_packet;
-	return (packet->data_size > 0) && (packet->offset < packet->data_size);
+	return (packet->len > 0) && (packet->offset < packet->len);
 }
 static int audio_callback(const void* _input,
 		void*                             output,
@@ -103,7 +107,7 @@ static int audio_callback(const void* _input,
 
 			packet = context->active_packet;
 			PaUtil_ReadRingBuffer(&context->audio_buffer, packet, 1);
-			printf("\rDRV: callback %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet->timestamp, packet->data_size, packet->data[0], packet->data[1]);
+			/* printf("\rDRV: callback %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet->timestamp, packet->len, packet->data[0], packet->data[1]); */
 		} else {
 			// printf("\rDRV: out of data\r\n");
 		}
@@ -264,15 +268,14 @@ static ErlDrvSSizeT portaudio_drv_control(
 		struct timestamped_packet packet = {
 			.offset = 0,
 			.timestamp = time,
-			.data_size = len * (sizeof(float)/2)
+			.len = len / 2
 		};
-		printf("\rDRV: play %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet.timestamp, packet.data_size, packet.data[0], packet.data[1]);
 		// conversion to float needed by libsamplerate
 		src_short_to_float_array((short*)(buf + 10), packet.data, len / 2);
 
+		printf("\rDRV: play %" PRIu64 " %" PRIu16 " [%.10f,%.10f : %.10f,%.10f ...]\r\n", packet.timestamp, packet.len, packet.data[0], packet.data[1], packet.data[2], packet.data[3]);
 		PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
 
-		printf("\rDRV: play %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet.timestamp, packet.data_size, packet.data[0], packet.data[1]);
 	}
 	return index;
 }
