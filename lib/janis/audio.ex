@@ -14,8 +14,18 @@ defmodule Janis.Audio do
 
   def test do
     {:ok, data} = File.open "../audio/song.raw", [:read], fn(file) ->
-      IO.binread file, 3528
+      IO.binread file, :all
     end
-    play({Janis.microseconds + 100, data})
+    now = Janis.microseconds
+    << packet::binary-size(3528), data::binary >> = data
+    play({now + 10000, packet})
+    << packet::binary-size(3528), data::binary >> = data
+    play({now + 12000, packet})
+    << packet::binary-size(3528), data::binary >> = data
+    play({now + 14000, packet})
+    << packet::binary-size(3528), data::binary >> = data
+    play({now + 16000, packet})
+    << packet::binary-size(3528), data::binary >> = data
+    play({now + 18000, packet})
   end
 end

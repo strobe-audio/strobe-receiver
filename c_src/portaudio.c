@@ -29,14 +29,14 @@
 
 // https://github.com/squidfunk/generic-linked-in-driver/blob/master/c_src/gen_driver.c
 
-typedef struct {
+typedef struct timestamped_packet {
 	uint64_t timestamp;
 	uint16_t data_size;
 	uint16_t offset;
-	float    data[PACKET_SIZE*2];
+	float    data[PACKET_SIZE];
 } timestamped_packet;
 
-typedef struct {
+typedef struct audio_callback_context {
 	PaStream*           audio_stream;
 	int                 sample_size;
 	PaUtilRingBuffer    audio_buffer;
@@ -44,7 +44,7 @@ typedef struct {
 	timestamped_packet *active_packet;
 } audio_callback_context;
 
-typedef struct {
+typedef struct portaudio_state {
 	ErlDrvPort port;
 	audio_callback_context *audio_context;
 } portaudio_state;
@@ -60,8 +60,8 @@ void send_packet(timestamped_packet *packet, audio_callback_context *context, fl
 		len = packet->data_size - packet->offset;
 		offset = packet->data_size;
 	}
-	printf("sending packet %lu %u -> %u %u\n", len, packet->offset, offset, packet->data_size, context->sample_size);
-	memcpy(out, (&packet->data) + packet->offset, len);
+	printf("\rsending packet %lu [ %u -> %u ] %u %d\r\n", len, packet->offset, offset, packet->data_size, context->sample_size);
+	memcpy(out, (float *)(packet->data + packet->offset), len);
 	packet->offset = offset;
 }
 
@@ -83,7 +83,6 @@ static int audio_callback(const void* _input,
 
 	UNUSED(_input);
 
-	memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
 	/* Roughly what we have to do here, ignoring any timing/resampling stuff:
 	 *
 	 *   - if we don't have active data
@@ -97,27 +96,23 @@ static int audio_callback(const void* _input,
 	 *  	 - send frame data to output
 	 */
 	if (context_has_data(context)) {
+		// printf("\rcontext has data\r\n");
 		packet = context->active_packet;
 	} else {
 		if (PaUtil_GetRingBufferReadAvailable(&context->audio_buffer) > 0) {
-			// this works
-			/* timestamped_packet* packet = (timestamped_packet*)driver_alloc(sizeof(timestamped_packet)); */
-			/* PaUtil_ReadRingBuffer(&context->audio_buffer, packet, 1); */
-			/* printf("packet addr %llu\n", packet->timestamp); */
-
-			/* timestamped_packet* packet = (timestamped_packet*)driver_alloc(sizeof(timestamped_packet)); */
 
 			packet = context->active_packet;
 			PaUtil_ReadRingBuffer(&context->audio_buffer, packet, 1);
-			/* printf("packet size %u %lu\n", packet->data_size, packet->timestamp); */
-			printf("DRV: callback %" PRIu64 " %" PRIu16 " %f,%f\n", packet->timestamp, packet->data_size, packet->data[0], packet->data[1]);
-			/* printf("packet addr %llu\n", packet->timestamp); */
-			/* printf("callback has data %lu %lu %llu\r\n", frameCount, frameCount * CHANNEL_COUNT * context->sample_size, packet->timestamp); */
-			// dst, src, len
-			/* memcpy(out, &packet->data, frameCount * CHANNEL_COUNT * context->sample_size); */
+			printf("\rDRV: callback %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet->timestamp, packet->data_size, packet->data[0], packet->data[1]);
+		} else {
+			// printf("\rDRV: out of data\r\n");
 		}
 	}
-	if (packet != NULL) {
+	if (packet == NULL) {
+		// printf("\rDRV: silence\r\n");
+		memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
+	} else {
+		// printf("\rDRV: packet\r\n");
 		send_packet(packet, context, out, frameCount);
 	}
 	return paContinue;
@@ -129,7 +124,7 @@ PaError initialize_audio_stream(audio_callback_context* context)
 	PaError             err;
 	PaStreamParameters  outputParameters;
 
-	printf("DRV: Pa_Initialize\n");
+	printf("\rDRV: Pa_Initialize\r\n");
 
 	err = Pa_Initialize();
 	if (err != paNoError) { goto error; }
@@ -137,7 +132,7 @@ PaError initialize_audio_stream(audio_callback_context* context)
 	outputParameters.device = Pa_GetDefaultOutputDevice(); //Take the default output device.
 
 	if (outputParameters.device == paNoDevice) {
-		fprintf(stderr,"Error: No default output device.\n");
+		fprintf(stderr,"\rError: No default output device.\r\n");
 		goto error;
 	}
 
@@ -173,9 +168,9 @@ PaError initialize_audio_stream(audio_callback_context* context)
 
 error:
 	Pa_Terminate();
-	fprintf( stderr, "An error occured while using the portaudio stream\n" );
-	fprintf( stderr, "Error number: %d\n", err );
-	fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+	fprintf( stderr, "\rAn error occured while using the portaudio stream\r\n" );
+	fprintf( stderr, "\rError number: %d\r\n", err );
+	fprintf( stderr, "\rError message: %s\r\n", Pa_GetErrorText( err ) );
 
 	return err;
 }
@@ -184,16 +179,15 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 {
 	PaError             err;
 
-	portaudio_state* state = (portaudio_state*)driver_alloc(sizeof(portaudio_state));
-	audio_callback_context* context = (audio_callback_context*)driver_alloc(sizeof(audio_callback_context));
-	context->active_packet = (timestamped_packet*)driver_alloc(sizeof(timestamped_packet));
-
 	UNUSED(buff);
 
-	context->audio_buffer_data = (timestamped_packet*)driver_alloc(sizeof(timestamped_packet*) * BUFFER_SIZE);
+	portaudio_state* state          = (portaudio_state*)        driver_alloc(sizeof(portaudio_state));
+	audio_callback_context* context = (audio_callback_context*) driver_alloc(sizeof(audio_callback_context));
+	context->active_packet          = (timestamped_packet*)     driver_alloc(sizeof(timestamped_packet));
+	context->audio_buffer_data      = (timestamped_packet*)     driver_alloc(sizeof(timestamped_packet) * BUFFER_SIZE);
 
 	if (context->audio_buffer_data == NULL) {
-		printf("DRV ERROR: problem allocating buffer\n");
+		printf("\rDRV ERROR: problem allocating buffer\r\n");
 		goto error;
 	}
 
@@ -203,7 +197,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	if (err != paNoError) { goto error; }
 
-	printf("DRV: driver start\n");
+	printf("\rDRV: driver start\r\n");
 	state->port = port;
 	state->audio_context = context;
 
@@ -215,19 +209,35 @@ error:
 	return (ErlDrvData)state;
 }
 
-void cleanup() {
-	printf("\nDRV: stop\n");
+void stop_audio(audio_callback_context *context) {
+	printf("\rDRV: stop audio\r\n");
+	PaError err;
+	err = Pa_AbortStream(context->audio_stream);
+	if (err != paNoError) { goto error; }
+	err = Pa_CloseStream(context->audio_stream);
+	if (err != paNoError) { goto error; }
+	Pa_Sleep(100);
 	Pa_Terminate();
+	return;
+
+error:
+	Pa_Terminate();
+	fprintf( stderr, "\rAn error occured while stopping the portaudio stream\r\n" );
+	fprintf( stderr, "\rError number: %d\r\n", err );
+	fprintf( stderr, "\rError message: %s\r\n", Pa_GetErrorText( err ) );
+	return;
 }
 
-// static void portaudio_drv_finish(ErlDrvData handle) {
-// 	cleanup();
-// 	driver_free((char*)handle);
-// }
-
-static void portaudio_drv_stop(ErlDrvData handle) {
-	cleanup();
-	driver_free((char*)handle);
+static void portaudio_drv_stop(ErlDrvData drv_data) {
+	portaudio_state *state = (portaudio_state*)drv_data;
+	audio_callback_context *context = state->audio_context;
+	stop_audio(context);
+	printf("\rDRV: free\r\n");
+	driver_free((char*)context->audio_buffer_data);
+	driver_free((char*)context->active_packet);
+	driver_free((char*)context);
+	driver_free((char*)drv_data);
+	printf("\rDRV: stopped\r\n");
 }
 
 static ErlDrvSSizeT portaudio_drv_control(
@@ -239,6 +249,8 @@ static ErlDrvSSizeT portaudio_drv_control(
 		ErlDrvSizeT  _rlen)
 {
 
+	int index = 0;
+
 	UNUSED(_len);
 	UNUSED(_rbuf);
 	UNUSED(_rlen);
@@ -247,21 +259,21 @@ static ErlDrvSSizeT portaudio_drv_control(
 	audio_callback_context *context = state->audio_context;
 
 	if (cmd == PLAY_COMMAND) {
-		timestamped_packet* packet = (timestamped_packet*)driver_alloc(sizeof(timestamped_packet));
 		uint64_t time = le64toh(*(uint64_t *) buf);
 		uint16_t len  = le16toh(*(uint16_t *) (buf + 8));
-		packet->timestamp = time;
-		packet->data_size = len;
-		packet->offset    = 0;
+		struct timestamped_packet packet = {
+			.offset = 0,
+			.timestamp = time,
+			.data_size = len * (sizeof(float)/2)
+		};
+		printf("\rDRV: play %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet.timestamp, packet.data_size, packet.data[0], packet.data[1]);
 		// conversion to float needed by libsamplerate
-		src_short_to_float_array((short*)(buf + 10), packet->data, len);
-		// memcpy(packet->data, (buf + 10), len);
+		src_short_to_float_array((short*)(buf + 10), packet.data, len / 2);
 
-		PaUtil_WriteRingBuffer(&context->audio_buffer, packet, 1);
+		PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
 
-		printf("DRV: play %" PRIu64 " %" PRIu16 " %f,%f\n", packet->timestamp, packet->data_size, packet->data[0], packet->data[1]);
+		printf("\rDRV: play %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet.timestamp, packet.data_size, packet.data[0], packet.data[1]);
 	}
-	int index = 0;
 	return index;
 }
 
