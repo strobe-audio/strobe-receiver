@@ -49,10 +49,22 @@ typedef struct portaudio_state {
 } portaudio_state;
 
 
-void send_packet(timestamped_packet *packet, audio_callback_context *context, float *out, unsigned long frameCount)
+bool load_next_packet(audio_callback_context *context)
 {
-	unsigned long requestedLen = frameCount * CHANNEL_COUNT;
-	/* unsigned long requestedBytes = requestedFloat * context->sample_size; */
+	if (PaUtil_GetRingBufferReadAvailable(&context->audio_buffer) > 0) {
+		PaUtil_ReadRingBuffer(&context->audio_buffer, context->active_packet, 1);
+
+		return true;
+	}
+	return false;
+}
+
+unsigned long send_packet_with_offset(timestamped_packet *packet,
+		audio_callback_context *context,
+		float *out,
+		unsigned long requestedLen,
+		unsigned long outOffset)
+{
 	unsigned long len = requestedLen;
 	uint16_t offset = 0;
 	if ((packet->offset + len) <= packet->len) {
@@ -61,12 +73,28 @@ void send_packet(timestamped_packet *packet, audio_callback_context *context, fl
 		len = packet->len - packet->offset;
 		offset = packet->len;
 	}
-	printf("\rsending packet %lu/%lu [ %u -> %u/%u ] [%f, %f]\r\n", len, requestedLen, packet->offset, offset, packet->len, *(packet->data + packet->offset), *(packet->data + packet->offset + 1));
-	memcpy(out, (float *)(packet->data + packet->offset), len* context->sample_size);
-	if (len < requestedLen) {
-		memset(out+len+1, 0, (requestedLen - len) * context->sample_size);
-	}
+	/* printf("\rsending packet %lu/%lu [ %u -> %u/%u ] [%f, %f]\r\n", len, requestedLen, packet->offset, offset, packet->len, *(packet->data + packet->offset), *(packet->data + packet->offset + 1)); */
+
+	memcpy((out + outOffset), (float *)(packet->data + packet->offset), len * context->sample_size);
+
 	packet->offset = offset;
+
+	return len;
+}
+
+void send_packet(timestamped_packet *packet,
+		audio_callback_context *context,
+		float *out,
+		unsigned long frameCount)
+{
+	unsigned long requestedLen = frameCount * CHANNEL_COUNT;
+	unsigned long len = send_packet_with_offset(packet, context, out, requestedLen, 0);
+	if (len < requestedLen) {
+		// i've obviously used up the active_packet so it's safe to just load the next one
+		if (load_next_packet(context)) {
+			len = send_packet_with_offset(packet, context, out, requestedLen - len, len);
+		}
+	}
 }
 
 bool context_has_data(audio_callback_context *context)
@@ -103,13 +131,8 @@ static int audio_callback(const void* _input,
 		// printf("\rcontext has data\r\n");
 		packet = context->active_packet;
 	} else {
-		if (PaUtil_GetRingBufferReadAvailable(&context->audio_buffer) > 0) {
-
+		if (load_next_packet(context)) {
 			packet = context->active_packet;
-			PaUtil_ReadRingBuffer(&context->audio_buffer, packet, 1);
-			/* printf("\rDRV: callback %" PRIu64 " %" PRIu16 " %f,%f\r\n", packet->timestamp, packet->len, packet->data[0], packet->data[1]); */
-		} else {
-			// printf("\rDRV: out of data\r\n");
 		}
 	}
 	if (packet == NULL) {
@@ -220,7 +243,6 @@ void stop_audio(audio_callback_context *context) {
 	if (err != paNoError) { goto error; }
 	err = Pa_CloseStream(context->audio_stream);
 	if (err != paNoError) { goto error; }
-	Pa_Sleep(100);
 	Pa_Terminate();
 	return;
 
