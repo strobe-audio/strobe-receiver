@@ -5,6 +5,18 @@ defmodule Janis.Audio.PortAudio do
   @shared_lib  "portaudio"
   @packet_size 3528
 
+  @sample_freq        Application.get_env(:janis, :sample_freq, 44100)
+  @sample_bits        Application.get_env(:janis, :sample_bits, 16)
+  @sample_channels    Application.get_env(:janis, :sample_channels, 2)
+
+  # need us per byte
+
+  @sample_bytes       div(@sample_bits, 8)
+  @frame_bytes        (@sample_bytes * @sample_channels)
+  @frames_per_packet  div(@packet_size, @frame_bytes)
+  @frame_duration_us  1_000_000 * (1.0 / @sample_freq)
+
+
   def start_link(name) do
     GenServer.start_link(__MODULE__, :ok, name: name)
   end
@@ -19,12 +31,58 @@ defmodule Janis.Audio.PortAudio do
   @play_command 1
 
   def handle_cast({:play, {_timestamp, _data} = packet}, {port} = state) do
-    play_packet(packet, state)
+    state = play_packet(packet, state)
     {:noreply, state}
   end
 
-  defp play_packet(packet, {port} = _state) do
-    Port.control(port, @play_command, audio_packet(packet))
+  defp play_packet(packet, state) do
+    play_packets(split_packet(packet), state)
+  end
+
+  defp play_packets([], state) do
+    state
+  end
+
+  defp play_packets([packet | packets], {port} = state) do
+    {:ok, buffer_size} = Port.control(port, @play_command, audio_packet(packet)) |> decode_port_response
+    # TODO: decide if we're worried about the audio buffer here.
+    # case buffer_size do
+    #   1 -> Logger.warn "Audio driver has low buffer #{buffer_size}"
+    #   _ ->
+    # end
+    play_packets(packets, state)
+  end
+
+  defp decode_port_response(iodata) do
+    IO.iodata_to_binary(iodata) |> :erlang.binary_to_term
+  end
+
+  @doc """
+  Takes a single >= 3528 byte timestamped packet & splits it into 1+ 3528 sized packets
+  with offset timestamps
+  """
+  def split_packet({timestamp, data} = _packet) do
+    split_packet_data(timestamp, data, [])
+  end
+
+  defp split_packet_data(timestamp, <<>>, packets) do
+    Enum.reverse packets
+  end
+
+  defp split_packet_data(timestamp, data, packets) when byte_size(data) < 3528 do
+     [{timestamp, data} | packets ] |> Enum.reverse
+  end
+
+  defp split_packet_data(timestamp, << packet_data::binary-size(3528), rest::binary >> = data, packets) when byte_size(data) >= 3528 do
+    next_timestamp = calculate_timestamp(timestamp, byte_size(packet_data))
+    split_packet_data(next_timestamp, rest, [{timestamp, packet_data} | packets ])
+  end
+
+  def calculate_timestamp(timestamp, bytes) do
+    # number of bytes should in theory always be a whole number of frames
+    frames = round Float.ceil(bytes / @frame_bytes)
+    # don't want fractions of a microsecond...
+    round(timestamp + (frames * @frame_duration_us))
   end
 
   defp load_driver do
@@ -44,7 +102,7 @@ defmodule Janis.Audio.PortAudio do
   defp audio_packet({timestamp, data}) do
     time = convert_timestamp(timestamp)
     len = byte_size(data)
-    Logger.debug "Packet time: #{time}; len: #{len} data: #{inspect data}"
+    # Logger.debug "Packet time: #{time}; len: #{len} data: #{inspect data}"
     << time::size(64)-little-unsigned-integer, len::size(16)-little-unsigned-integer, data::binary >>
   end
 end

@@ -26,3 +26,6 @@ config :logger, :console,
 #
 #     import_config "#{Mix.env}.exs"
 
+config :janis, :sample_freq,     44100
+config :janis, :sample_bits,     16
+config :janis, :sample_channels, 2
