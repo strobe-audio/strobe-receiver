@@ -9,16 +9,13 @@ defmodule Janis.Player.Buffer do
   defmodule S do
     defstruct queue:       :queue.new,
               stream_info: nil,
-              status:      :stopped
+              status:      :stopped,
+              count:       0
   end
 
   def start_link(stream_info, name) do
     GenServer.start_link(__MODULE__, stream_info, name: name)
   end
-
-  # def get(buffer) do
-  #   GenServer.call(buffer, :get)
-  # end
 
   def put(buffer, packet) do
     GenServer.cast(buffer, {:put, packet})
@@ -46,7 +43,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def handle_info({:DOWN, _monitor, :process, _channel, reason}, state) do
-    Logger.debug "Emitter down"
+    # Logger.debug "Emitter down"
     {:noreply, state}
   end
 
@@ -69,15 +66,17 @@ defmodule Janis.Player.Buffer do
     put_packet(packet, %S{state | status: :playing})
   end
 
-  def put_packet(packet, %S{status: :playing, queue: queue, stream_info: {interval_ms, _size}} = state) do
-    queue  = cons(packet, queue)
-    %S{ state | queue: queue }
+  def put_packet(packet, %S{status: :playing, queue: queue, stream_info: {interval_ms, _size}, count: count} = state) do
+    queue  = cons(packet, queue, count)
+    %S{ state | queue: queue, count: count + 1 }
   end
 
-  def cons(packet, queue) do
+  def cons(packet, queue, count) do
+    now = Janis.microseconds
     translated_packet = {timestamp, _data} = Janis.Broadcaster.translate_packet(packet)
+    # Logger.debug "put #{timestamp - now}"
     queue = :queue.in(translated_packet, queue)
-    monitor_queue_length(queue)
+    monitor_queue_length(queue, count)
   end
 
   def maybe_emit_packets(%S{queue: queue} = state) do
@@ -86,48 +85,54 @@ defmodule Janis.Player.Buffer do
 
   def maybe_emit_packets(queue, %S{stream_info: {interval_ms, _size}} = state) do
 
-    packets = :queue.to_list(queue)
-    now = Janis.microseconds
+    # packets = :queue.to_list(queue)
+    # now = Janis.microseconds
     interval_us = interval_ms * 1000
 
-    {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
-      (t - now) < interval_us
-    end
-
-
-    unless Enum.empty?(to_emit) do
-      queue = :queue.from_list(to_keep)
-      emit_packet(to_emit)
-      state = %S{state | queue: queue, status: :playing }
-    end
-
-    state
-    # case :queue.peek(queue) do
-    #   {:value, {first_timestamp, _} = first_packet} ->
-    #     case first_timestamp - Janis.microseconds do
-    #       i when i < interval_us ->
-    #         {:ok, pid} = emit_packet(first_packet)
-    #         queue = :queue.drop(queue)
-    #         %S{state | queue: queue, status: :playing }
-    #       _ ->
-    #         state
-    #     end
-    #   :empty ->
-    #     state
+    # {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
+    #   (t - now) < interval_us
     # end
+    #
+    #
+    # unless Enum.empty?(to_emit) do
+    #   queue = :queue.from_list(to_keep)
+    #   emit_packet(to_emit)
+    #   state = %S{state | queue: queue, status: :playing }
+    # end
+    #
+    # state
+    case :queue.peek(queue) do
+      {:value, {first_timestamp, _} = first_packet} ->
+        case first_timestamp - Janis.microseconds do
+          i when i < interval_us ->
+            emit_packet(first_packet)
+            queue = :queue.drop(queue)
+            %S{state | queue: queue, status: :playing }
+          _ ->
+            state
+        end
+      :empty ->
+        state
+    end
   end
 
-  def emit_packet([]) do
+  def emit_packets([]) do
   end
 
-  def emit_packet([packet | packets]) do
+  def emit_packets([packet | packets]) do
+    emit_packet(packet)
+    emit_packets(packets)
+  end
+
+  def emit_packet(packet) do
     # pid = spawn(Janis.Player.Emitter, :new, [self, packet])
-    emitter = :poolboy.checkout(Janis.Player.EmitterPool)
-    Janis.Player.Emitter.emit(emitter, packet)
-    emit_packet(packets)
+    # emitter = :poolboy.checkout(Janis.Player.EmitterPool)
+    # Logger.debug "emt #{Janis.milliseconds}"
+    # Janis.Player.Emitter.emit(emitter, packet)
+    Janis.Audio.play(packet)
   end
 
-  def monitor_queue_length(queue) do
+  def monitor_queue_length(queue, count) do
     case :queue.len(queue) do
       l when l > 20 ->
         Logger.warn "Overflow buffer! #{inspect (l + 1)}"
@@ -135,7 +140,11 @@ defmodule Janis.Player.Buffer do
         Logger.warn "Empty buffer!"
       l when l < 2 ->
         Logger.warn "Low buffer #{l}"
-      _ ->
+      l ->
+        case rem(count, 1000) do
+          0 -> Logger.debug "len #{l}"
+          _ ->
+        end
     end
     queue
   end
