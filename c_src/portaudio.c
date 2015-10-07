@@ -291,7 +291,11 @@ PaError initialize_audio_stream(audio_callback_context* context)
 	outputParameters.channelCount = CHANNEL_COUNT;                     /* Stereo output, most likely supported. */
 	outputParameters.hostApiSpecificStreamInfo = NULL;
 	outputParameters.sampleFormat = paFloat32;             /* 32 bit floating point output. */
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
+	// I don't particularly need a low latency, I need a consistent latency
+	// the two given options are 'defaultLowOutputLatency' and 'defaultHighOutputLatency'
+	PaTime latency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
+	printf("Using latency %f\r\n", latency);
+	outputParameters.suggestedLatency = latency;
 
 	err = Pa_OpenStream(&stream,
 			NULL,                              // No input.
