@@ -21,7 +21,7 @@ defmodule Janis.Mixfile do
   #
   # Type `mix help compile.app` for more information
   def application do
-    [applications: [:porcelain, :logger, :dnssd],
+    [applications: [:logger, :dnssd],
      mod: {Janis, []}]
   end
 
@@ -35,8 +35,7 @@ defmodule Janis.Mixfile do
   #
   # Type `mix help deps` for more examples and options
   defp deps do
-    [ {:porcelain, "~> 2.0"},
-      {:socket, "~> 0.3.0"},
+    [ {:socket, "~> 0.3.0"},
       {:dnssd, github: "benoitc/dnssd_erlang"},
       {:poison, "~> 1.5"},
       {:poolboy, github: "devinus/poolboy"},
