@@ -51,6 +51,8 @@ EI_LIBS     = -L$(ERLANG_PATH)/../lib/erl_interface-3.8/lib \
 AUDIO_INCLUDE = -I/usr/local/include
 AUDIO_LIBS    = -L/usr/local/lib -lportaudio -lsamplerate
 
+STD_LIBS      = -lm
+
 HEADER_FILES = c_src
 SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c
 
@@ -67,10 +69,10 @@ default: all
 all: $(TARGET_LIB)
 
 .c.o:
-	$(CC) $(CFLAGS) $(ERL_LIBS) $(ERL_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
+	$(CC) $(CFLAGS) $(ERL_INCLUDE) $(EI_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
 
 $(TARGET_LIB): $(OBJECT_FILES)
-	$(CC) -o $@ $^ $(ERL_LIBS) $(EI_LIBS) $(AUDIO_LIBS) $(EXTRA_OPTIONS) -fPIC -O3
+	$(CC) -o $@ $^ $(EI_LIBS) $(AUDIO_LIBS) $(STD_LIBS) $(EXTRA_OPTIONS) -fPIC -O3
 
 clean:
 	rm -f  c_src/*.o priv_dir/*.so

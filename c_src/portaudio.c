@@ -2,10 +2,15 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
 #include <inttypes.h>
 #include <stdbool.h>
+#include <assert.h>
+#include <sys/time.h>
 
-#include "erl_driver.h"
+#include <erl_driver.h>
+#include <ei.h>
+
 #include "endian.h"
 #include <portaudio.h>
 #include "pa_ringbuffer.h"
@@ -14,17 +19,24 @@
 #include <samplerate.h>
 
 #define PLAY_COMMAND  (1)
-/*
- * 3528 bytes = 1,764 short
- */
+#define FLSH_COMMAND  (2)
 
-#define PACKET_SIZE   (1764)
+#define USECONDS      (1000000.0)
+#define PACKET_SIZE   (1764) // 3528 bytes = 1,764 shorts
 #define BUFFER_SIZE   (16)
 #define SAMPLE_RATE   (44100.0)
 #define CHANNEL_COUNT (2)
+#define SECONDS_PER_FRAME (1.0 / SAMPLE_RATE)
+// used to work out the time offset of the active packet based on
+// its offset, which is in individual floats, not frames. However
+// the offset will always be a multiple of 2 so this is just a convenience
+#define SECONDS_PER_FLOAT (1.0 / (SAMPLE_RATE * CHANNEL_COUNT))
+#define USECONDS_PER_FLOAT (USECONDS * SECONDS_PER_FLOAT)
 
 // http://stackoverflow.com/questions/3599160/unused-parameter-warnings-in-c-code
 #define UNUSED(x) (void)(x)
+
+#define CLEAR_OUTPUT_EVERY_FRAME 1
 
 // https://github.com/squidfunk/generic-linked-in-driver/blob/master/c_src/gen_driver.c
 
@@ -41,6 +53,15 @@ typedef struct audio_callback_context {
 	PaUtilRingBuffer    audio_buffer;
 	timestamped_packet *audio_buffer_data;
 	timestamped_packet *active_packet;
+	PaTime              stream_start_offset;
+	uint64_t            stream_start_time;
+
+	uint64_t            callback_count;
+	PaTime              calculated_next_callback_time;
+	double              sample_rate_ratio;
+
+	bool                playing;
+
 } audio_callback_context;
 
 typedef struct portaudio_state {
@@ -48,6 +69,19 @@ typedef struct portaudio_state {
 	audio_callback_context *audio_context;
 } portaudio_state;
 
+uint64_t current_time() {
+	struct timeval tv;
+	gettimeofday(&tv,NULL);
+	return (tv.tv_sec * (uint64_t)1000000) + tv.tv_usec;
+}
+
+uint64_t stream_time_to_absolute_time(
+		audio_callback_context *context,
+		PaTime   stream_time
+		) {
+	PaTime t = stream_time - context->stream_start_offset;
+	return context->stream_start_time + llround(t * USECONDS);
+}
 
 bool load_next_packet(audio_callback_context *context)
 {
@@ -59,21 +93,27 @@ bool load_next_packet(audio_callback_context *context)
 	return false;
 }
 
-unsigned long send_packet_with_offset(timestamped_packet *packet,
-		audio_callback_context *context,
+uint64_t packet_output_absolute_time(timestamped_packet *packet) {
+	return packet->timestamp + (uint64_t)llround(packet->offset * USECONDS_PER_FLOAT);
+}
+
+unsigned long send_packet_with_offset(audio_callback_context *context,
 		float *out,
 		unsigned long requestedLen,
 		unsigned long outOffset)
 {
+	timestamped_packet *packet = context->active_packet;
+
 	unsigned long len = requestedLen;
 	uint16_t offset = 0;
+
 	if ((packet->offset + len) <= packet->len) {
 		offset = packet->offset + len;
 	} else {
 		len = packet->len - packet->offset;
 		offset = packet->len;
 	}
-	/* printf("\rsending packet %lu/%lu [ %u -> %u/%u ] [%f, %f]\r\n", len, requestedLen, packet->offset, offset, packet->len, *(packet->data + packet->offset), *(packet->data + packet->offset + 1)); */
+	// printf("\rsending packet %lu/%lu [ %u -> %u/%u ] [%f, %f]\r\n", len, requestedLen, packet->offset, offset, packet->len, *(packet->data + packet->offset), *(packet->data + packet->offset + 1));
 
 	memcpy((out + outOffset), (float *)(packet->data + packet->offset), len * context->sample_size);
 
@@ -82,19 +122,86 @@ unsigned long send_packet_with_offset(timestamped_packet *packet,
 	return len;
 }
 
-void send_packet(timestamped_packet *packet,
-		audio_callback_context *context,
+void send_packet(audio_callback_context *context,
 		float *out,
-		unsigned long frameCount)
+		unsigned long frameCount,
+		const PaStreamCallbackTimeInfo*   timeInfo
+		)
 {
+	timestamped_packet *packet;
+	unsigned long len;
 	unsigned long requestedLen = frameCount * CHANNEL_COUNT;
-	unsigned long len = send_packet_with_offset(packet, context, out, requestedLen, 0);
+
+
+	uint64_t output_time = stream_time_to_absolute_time(context, timeInfo->outputBufferDacTime);
+	uint64_t packet_time;
+
+	if (context->playing == false) {
+		packet      = context->active_packet;
+		output_time = stream_time_to_absolute_time(context, timeInfo->outputBufferDacTime);
+		packet_time = packet_output_absolute_time(packet);
+		// we want to wait for the right time to start playing the packet
+		if (packet_time > output_time) {
+			// not our time... wait
+			printf("waiting %"PRIi64"\r\n", packet_time - output_time);
+#ifndef CLEAR_OUTPUT_EVERY_FRAME
+			memset(out, 0, requestedLen * context->sample_size);
+#endif
+			return;
+		} else if (output_time >= packet_time) {
+			// now we need to calculate the offset within the output stream to start inserting our packet
+			context->playing = true;
+			double diff     = (output_time - packet_time) / USECONDS; // seconds
+			long int offset = CHANNEL_COUNT * lround(diff / SECONDS_PER_FRAME);
+			if ((unsigned long)offset > requestedLen) {
+				// we're very late!
+				printf("%"PRIi64" %f -> VERY LATE PLAYBACK START %lu/%lu / %hu\r\n", output_time - packet_time, diff, offset, frameCount*CHANNEL_COUNT, packet->len);
+				// TODO: instead of looking into the output stream for an offset
+				// we start appending to the stream at offset 0 but from an
+				// offset within the packet itself
+				len = send_packet_with_offset(context, out, requestedLen, 0);
+			} else {
+				printf("%"PRIi64" %f -> start playing with frame offset %lu/%lu / %hu\r\n", output_time - packet_time, diff, offset, frameCount*CHANNEL_COUNT, packet->len);
+				uint64_t packet_output_time = packet->timestamp + (uint64_t)llround(offset * USECONDS_PER_FLOAT);
+				printf("output %"PRIu64"; packet: %"PRIu64" = %"PRIi64"\r\n", output_time, packet_output_time, output_time - packet_output_time);
+				// play up to offset worth of silence
+#ifndef CLEAR_OUTPUT_EVERY_FRAME
+				if (offset > 0) {
+					memset(out, 0, (offset - 1) * context->sample_size);
+				}
+#endif
+				// then start playing the packet
+				len = send_packet_with_offset(context, out, requestedLen - offset, offset);
+
+			}
+			// we're done
+			return;
+		}
+	} else {
+		// well. we need to be re-sampling the packets - perhaps here is where that's done
+	}
+
+
+	////////////////////////////////
+
+
+	len = send_packet_with_offset(context, out, requestedLen, 0);
+
 	if (len < requestedLen) {
 		// i've obviously used up the active_packet so it's safe to just load the next one
+		unsigned long remaining = requestedLen - len;
 		if (load_next_packet(context)) {
-			len = send_packet_with_offset(packet, context, out, requestedLen - len, len);
+			len = send_packet_with_offset(context, out, remaining, len);
+		} else {
+#ifndef CLEAR_OUTPUT_EVERY_FRAME
+			memset(out+len, 0, remaining * context->sample_size);
+#endif
 		}
 	}
+	packet      = context->active_packet;
+	packet_time = packet_output_absolute_time(packet);
+	printf("1: packet time: %"PRIu64"; output_time: %"PRIu64" = %"PRIi64"\r\n", packet_time, output_time, output_time - packet_time);
+
 }
 
 bool context_has_data(audio_callback_context *context)
@@ -106,7 +213,7 @@ static int audio_callback(const void* _input,
 		void*                             output,
 		unsigned long                     frameCount,
 		const PaStreamCallbackTimeInfo*   timeInfo,
-		PaStreamCallbackFlags             statusFlags,
+		PaStreamCallbackFlags             _statusFlags,
 		void*                             userData)
 {
 	audio_callback_context* context = (audio_callback_context*)userData;
@@ -114,21 +221,35 @@ static int audio_callback(const void* _input,
 	timestamped_packet* packet = NULL;
 
 	UNUSED(_input);
+	UNUSED(_statusFlags);
 
-	/* Roughly what we have to do here, ignoring any timing/resampling stuff:
-	**
-	**   - if we don't have active data
-	**     - if we have a packet in the ring buffer (playback starting)
-	**     - retrieve packet
-	**     - set it as active - try again...
-	**   - with active data
-	**     - get enough frames from the active packet to satisfy the request
-	**       - update the packet pointer to keep track of position
-	**       - if the current packet doesn't have enough frames left, get the next...
-	**     - send frame data to output
-	**/
+	++context->callback_count;
+
+
+#ifdef CLEAR_OUTPUT_EVERY_FRAME
+	// just clear the buffer - saves a lot of fussing at transition points
+	// at the cost of a tiny overhead every frame
+	memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
+#endif
+
+	if (context->calculated_next_callback_time) {
+		// work out the sample rate ratio based on the difference between
+		// the calculated time and the time given in timeInfo->outputBufferDacTime
+		//
+		// TODO: On my mac this always gives a diff of 0.00000 -- is this real of just
+		// portaudio shuffling its internal time to be consistent with the audio card?
+		// Need to compare the stream times with the wall times to verify the stream clock
+		//
+		/* printf("callback time diff %f / %f = %f\r\n", timeInfo->outputBufferDacTime, context->calculated_next_callback_time, (timeInfo->outputBufferDacTime - context->calculated_next_callback_time)); */
+	}
+
+	// work out the calculated_next_callback_time
+	context->calculated_next_callback_time = timeInfo->outputBufferDacTime + (frameCount * SECONDS_PER_FRAME);
+
+	/* printf("requested %lu frames\r\n", frameCount); */
+
+
 	if (context_has_data(context)) {
-		// printf("\rcontext has data\r\n");
 		packet = context->active_packet;
 	} else {
 		if (load_next_packet(context)) {
@@ -136,11 +257,12 @@ static int audio_callback(const void* _input,
 		}
 	}
 	if (packet == NULL) {
-		// printf("\rDRV: silence\r\n");
+		context->playing = false;
+#ifndef CLEAR_OUTPUT_EVERY_FRAME
 		memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
+#endif
 	} else {
-		// printf("\rDRV: packet\r\n");
-		send_packet(packet, context, out, frameCount);
+		send_packet(context, out, frameCount, timeInfo);
 	}
 	return paContinue;
 }
@@ -191,6 +313,15 @@ PaError initialize_audio_stream(audio_callback_context* context)
 
 	if (err != paNoError) { goto error; }
 
+	PaTime stream_time = Pa_GetStreamTime(stream);
+
+	if (stream_time == 0) { goto error; }
+
+	context->stream_start_time = current_time();
+	context->stream_start_offset = stream_time;
+
+	printf("stream start at %" PRIu64 "/ %f\r\n", context->stream_start_time, context->stream_start_offset);
+
 	return paNoError;
 
 error:
@@ -208,15 +339,25 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	UNUSED(buff);
 
-	portaudio_state* state          = (portaudio_state*)        driver_alloc(sizeof(portaudio_state));
-	audio_callback_context* context = (audio_callback_context*) driver_alloc(sizeof(audio_callback_context));
-	context->active_packet          = (timestamped_packet*)     driver_alloc(sizeof(timestamped_packet));
-	context->audio_buffer_data      = (timestamped_packet*)     driver_alloc(sizeof(timestamped_packet) * BUFFER_SIZE);
+	portaudio_state* state          = driver_alloc(sizeof(portaudio_state));
+	audio_callback_context* context = driver_alloc(sizeof(audio_callback_context));
+	context->active_packet          = driver_alloc(sizeof(timestamped_packet));
+	context->audio_buffer_data      = driver_alloc(sizeof(timestamped_packet) * BUFFER_SIZE);
 
 	if (context->audio_buffer_data == NULL) {
 		printf("\rDRV ERROR: problem allocating buffer\r\n");
 		goto error;
 	}
+
+	context->active_packet->timestamp      = 0;
+	context->active_packet->len            = 0;
+	context->active_packet->offset         = 0;
+
+	// initialize stats on context
+	context->callback_count                = (uint64_t)0;
+	context->sample_rate_ratio             = (double)  0.0;
+	context->calculated_next_callback_time = (double)  0.0;
+	context->playing                       = false;
 
 	PaUtil_InitializeRingBuffer(&context->audio_buffer, sizeof(timestamped_packet), BUFFER_SIZE, context->audio_buffer_data);
 
@@ -266,19 +407,26 @@ static void portaudio_drv_stop(ErlDrvData drv_data) {
 	printf("\rDRV: stopped\r\n");
 }
 
+static void encode_response(char *rbuf, int *index, long buffer_size) {
+  assert(rbuf && index);
+	ei_encode_tuple_header(rbuf, index, 2);
+  ei_encode_atom(rbuf, index, "ok");
+	ei_encode_long(rbuf, index, buffer_size);
+}
+
 static ErlDrvSSizeT portaudio_drv_control(
 		ErlDrvData   drv_data,
 		unsigned int cmd,
 		char         *buf,
 		ErlDrvSizeT  _len,
-		char         **_rbuf,
+		char         **rbuf,
 		ErlDrvSizeT  _rlen)
 {
 
 	int index = 0;
+	ei_encode_version(*rbuf, &index);
 
 	UNUSED(_len);
-	UNUSED(_rbuf);
 	UNUSED(_rlen);
 
 	portaudio_state *state = (portaudio_state*)drv_data;
@@ -292,14 +440,21 @@ static ErlDrvSSizeT portaudio_drv_control(
 			.timestamp = time,
 			.len = len / 2
 		};
-		// conversion to float needed by libsamplerate
-		src_short_to_float_array((short*)(buf + 10), packet.data, len / 2);
 
-		printf("\rDRV: play %" PRIu64 " %" PRIu16 " [%.10f,%.10f : %.10f,%.10f ...]\r\n", packet.timestamp, packet.len, packet.data[0], packet.data[1], packet.data[2], packet.data[3]);
+		// conversion to float needed by libsamplerate
+		// TODO: the samples are little-endian. I need to make sure that
+		// this conversion also translates the data from le to native-endian
+		// using `le16toh`. The code for `src_short_to_float_array` is insanely simple
+		// so just a matter of copy-paste & adjust.
+		src_short_to_float_array((short*)(buf + 10), packet.data, packet.len);
+
 		PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
 
+		long buffer_size = PaUtil_GetRingBufferReadAvailable(&context->audio_buffer);
+
+		encode_response(*rbuf, &index, buffer_size);
 	}
-	return index;
+	return (ErlDrvSSizeT)index;
 }
 
 ErlDrvEntry example_driver_entry = {
