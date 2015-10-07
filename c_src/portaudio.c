@@ -198,9 +198,11 @@ void send_packet(audio_callback_context *context,
 #endif
 		}
 	}
-	packet      = context->active_packet;
-	packet_time = packet_output_absolute_time(packet);
-	printf("1: packet time: %"PRIu64"; output_time: %"PRIu64" = %"PRIi64"\r\n", packet_time, output_time, output_time - packet_time);
+	if ((context->callback_count % 400) == 0) {
+		packet      = context->active_packet;
+		packet_time = packet_output_absolute_time(packet);
+		printf("1: packet time: %"PRIu64"; output_time: %"PRIu64" = %"PRIi64"\r\n", packet_time, output_time, output_time - packet_time);
+	}
 
 }
 
