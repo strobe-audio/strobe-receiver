@@ -272,11 +272,14 @@ PaError initialize_audio_stream(audio_callback_context* context)
 	PaStream*           stream;
 	PaError             err;
 	PaStreamParameters  outputParameters;
+	bool has_initialized = false;
 
 	printf("\rDRV: Pa_Initialize\r\n");
 
 	err = Pa_Initialize();
 	if (err != paNoError) { goto error; }
+
+	has_initialized = true;
 
 	outputParameters.device = Pa_GetDefaultOutputDevice(); //Take the default output device.
 
@@ -325,7 +328,9 @@ PaError initialize_audio_stream(audio_callback_context* context)
 	return paNoError;
 
 error:
-	Pa_Terminate();
+	if (has_initialized) {
+		Pa_Terminate();
+	}
 	fprintf( stderr, "\rAn error occured while using the portaudio stream\r\n" );
 	fprintf( stderr, "\rError number: %d\r\n", err );
 	fprintf( stderr, "\rError message: %s\r\n", Pa_GetErrorText( err ) );
