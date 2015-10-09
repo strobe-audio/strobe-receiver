@@ -85,51 +85,50 @@ defmodule Janis.Player.Buffer do
 
   def maybe_emit_packets(queue, %S{stream_info: {interval_ms, _size}} = state) do
 
-    # packets = :queue.to_list(queue)
-    # now = Janis.microseconds
+    packets = :queue.to_list(queue)
+    now = Janis.microseconds
     interval_us = interval_ms * 1000
 
-    # {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
-    #   (t - now) < interval_us
-    # end
-    #
-    #
-    # unless Enum.empty?(to_emit) do
-    #   queue = :queue.from_list(to_keep)
-    #   emit_packet(to_emit)
-    #   state = %S{state | queue: queue, status: :playing }
-    # end
-    #
-    # state
-    case :queue.peek(queue) do
-      {:value, {first_timestamp, _} = first_packet} ->
-        case first_timestamp - Janis.microseconds do
-          i when i < interval_us ->
-            emit_packet(first_packet)
-            queue = :queue.drop(queue)
-            %S{state | queue: queue, status: :playing }
-          _ ->
-            state
-        end
-      :empty ->
-        state
+    {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
+      (t - now) < interval_us
     end
+
+
+    unless Enum.empty?(to_emit) do
+      queue = :queue.from_list(to_keep)
+      state = emit_packets(state, to_emit)
+      state = %S{state | queue: queue, status: :playing }
+    end
+
+    state
+    # case :queue.peek(queue) do
+    #   {:value, {first_timestamp, _} = first_packet} ->
+    #     case first_timestamp - Janis.microseconds do
+    #       i when i < interval_us ->
+    #         state = emit_packet(state, first_packet)
+    #         queue = :queue.drop(queue)
+    #         %S{state | queue: queue, status: :playing }
+    #       _ ->
+    #         state
+    #     end
+    #   :empty ->
+    #     state
+    # end
   end
 
-  def emit_packets([]) do
+  def emit_packets(state, []) do
+    state
   end
 
-  def emit_packets([packet | packets]) do
-    emit_packet(packet)
-    emit_packets(packets)
+  def emit_packets(state, [packet | packets]) do
+    state = emit_packet(state, packet)
+    emit_packets(state, packets)
   end
 
-  def emit_packet(packet) do
-    # pid = spawn(Janis.Player.Emitter, :new, [self, packet])
-    # emitter = :poolboy.checkout(Janis.Player.EmitterPool)
+  def emit_packet(state, packet) do
     # Logger.debug "emt #{Janis.milliseconds}"
-    # Janis.Player.Emitter.emit(emitter, packet)
     Janis.Audio.play(packet)
+    state
   end
 
   def monitor_queue_length(queue, count) do
