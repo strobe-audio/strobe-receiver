@@ -11,6 +11,7 @@ defmodule Janis.Player.Emitter do
   end
 
   def init([interval: packet_interval, packet_size: packet_size, pool: pool] = opts) do
+    # Logger.disable self
     Logger.debug "Launched emitter #{inspect opts}"
     :proc_lib.init_ack({:ok, self})
 
@@ -23,12 +24,12 @@ defmodule Janis.Player.Emitter do
   end
 
   def wait(state) do
-    Logger.debug "Emitter.wait... #{inspect state}"
+    # Logger.debug "Emitter.wait... #{inspect state}"
     receive do
       {:emit, packet} ->
         start(packet, state)
       msg ->
-        Logger.debug "Emitter got #{inspect msg}"
+        # Logger.debug "Emitter got #{inspect msg}"
         wait(state)
     end
   end
@@ -38,9 +39,9 @@ defmodule Janis.Player.Emitter do
   end
 
   def start(packet, {{t, n, d}, _packet, _config} = state) do
-    # Logger.disable(self)
+    Logger.disable(self)
     {t, _} = packet
-    Logger.debug "Start emitter #{t - current_time}"
+    # Logger.debug "Start emitter #{t - current_time}"
     state = {{Janis.microseconds, n, d}, packet, _config}
     test_packet state
   end
@@ -63,7 +64,8 @@ defmodule Janis.Player.Emitter do
     end
   end
 
-  @jitter 250
+  # @jitter 250
+  @jitter 500
 
   def loop_tight({{t, n, d}, {timestamp, _data}, _config}) do
     now = current_time
@@ -77,30 +79,39 @@ defmodule Janis.Player.Emitter do
     end
   end
 
-    Logger.debug "Play frame.. #{current_time - timestamp}"
   def play_frame({_loop, {timestamp, data}, {_pi, _ps, pool} = _config} = state) do
-    send_data = case current_time - timestamp do
-      d when d <= 0 ->
-        data
-      d ->
-        # do I skip from the beginning or the end...
-        Logger.warn "Late #{d} skipping #{skip_bytes(d)} bytes"
-        case skip_bytes(d) do
-          s when s > byte_size(data) ->
-            <<>>
-          s ->
-            << skip :: binary-size(s), rest :: binary >> = data
-            rest
-        end
+    delta = current_time - timestamp
+    msg = "Play frame.. #{delta}"
+    case delta do
+      _ when delta <= 0 ->
+        # Logger.debug msg
+        nil
+      _ ->
+        Logger.warn msg
     end
+    # send_data = case current_time - timestamp do
+    #   d when d <= 0 ->
+    #     data
+    #   d ->
+    #     # do I skip from the beginning or the end...
+    #     Logger.warn "Late #{d} skipping #{skip_bytes(d)} bytes"
+    #     case skip_bytes(d) do
+    #       s when s > byte_size(data) ->
+    #         <<>>
+    #       s ->
+    #         << skip :: binary-size(s), rest :: binary >> = data
+    #         rest
+    #     end
+    # end
+
+    send_data = data
 
     if byte_size(send_data) > 0 do
       # Logger.debug "PLAY #{byte_size(send_data)}"
       Janis.Audio.play(send_data)
     end
 
-    # loop(next_frame(state))
-    Logger.debug "Check back into pool"
+    # Logger.debug "Check back into pool #{pool}"
     :poolboy.checkin(pool, self)
     wait({_loop, {}, _config})
   end
@@ -120,9 +131,9 @@ defmodule Janis.Player.Emitter do
       0 -> now - t
       _ -> (((n * d) + (now - t)) / m)
     end
-    if rem(m, 1000) == 0 do
-      Logger.debug "#{now}, #{m}, #{delay}"
-    end
+    # if rem(m, 1000) == 0 do
+    #   Logger.debug "#{now}, #{m}, #{delay}"
+    # end
     {{now, m, delay}, packet, config}
   end
 
