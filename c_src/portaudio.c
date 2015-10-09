@@ -1,3 +1,6 @@
+// see http://man7.org/linux/man-pages/man3/endian.3.html
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
