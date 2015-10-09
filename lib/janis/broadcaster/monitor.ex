@@ -83,6 +83,8 @@ defmodule Janis.Broadcaster.Monitor do
     avg_delta = round (((measurement_count * delta) + mdelta) / new_count)
     state = %S{ state | measurement_count: new_count, latency: max_latency, delta: avg_delta }
     Logger.info "New time delta measurement #{delta} -> #{avg_delta} (#{avg_delta - delta})"
+    {:ok, c_time, e_time} = Janis.Audio.time
+    Logger.info("C time: #{c_time}; E time: #{e_time} delta: #{c_time - e_time}")
     collect_measurements(state)
     state
   end

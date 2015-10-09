@@ -19,7 +19,8 @@
 #include <samplerate.h>
 
 #define PLAY_COMMAND  (1)
-#define FLSH_COMMAND  (2)
+#define TIME_COMMAND  (2)
+#define FLSH_COMMAND  (3)
 
 #define USECONDS      (1000000.0)
 #define PACKET_SIZE   (1764) // 3528 bytes = 1,764 shorts
@@ -464,6 +465,11 @@ static ErlDrvSSizeT portaudio_drv_control(
 		long buffer_size = PaUtil_GetRingBufferReadAvailable(&context->audio_buffer);
 
 		encode_response(*rbuf, &index, buffer_size);
+	} else if (cmd == TIME_COMMAND) {
+		uint64_t t = current_time();
+		ei_encode_tuple_header(*rbuf, &index, 2);
+		ei_encode_atom(*rbuf, &index, "ok");
+		ei_encode_ulonglong(*rbuf, &index, t);
 	}
 	return (ErlDrvSSizeT)index;
 }

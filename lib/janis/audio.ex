@@ -12,6 +12,10 @@ defmodule Janis.Audio do
     GenServer.cast(@name, {:play, packet})
   end
 
+  def time do
+    GenServer.call(@name, :time)
+  end
+
   def test(n \\ 5) do
     c = Enum.min [50, n]
     {:ok, data} = File.open "../audio/176400-shubert-piano-quintet.raw", [:read], fn(file) ->

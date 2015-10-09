@@ -29,6 +29,13 @@ defmodule Janis.Audio.PortAudio do
   end
 
   @play_command 1
+  @time_command 2
+  @flsh_command 3
+
+  def handle_call(:time, _from, {port} = state) do
+    {:ok, c_time} = Port.control(port, @time_command, <<>>) |> decode_port_response
+    {:reply, {:ok, c_time, convert_timestamp(Janis.microseconds)}, state}
+  end
 
   def handle_cast({:play, {_timestamp, _data} = packet}, {port} = state) do
     state = play_packet(packet, state)
