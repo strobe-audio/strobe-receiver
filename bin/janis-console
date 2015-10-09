@@ -1,0 +1,4 @@
+#!/bin/bash
+# vim: set filetype=sh
+
+/usr/bin/env iex --erl "+C multi_time_warp" -S mix

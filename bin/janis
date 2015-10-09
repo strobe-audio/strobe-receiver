@@ -1,0 +1,49 @@
+#!/bin/bash
+# vim: set filetype=sh
+
+# Based on:
+# https://gist.github.com/camshaft/f0359b6aaaade2a11d73
+
+HOSTNAME="localhost"
+NODE="janis"
+
+if [ -z "$COOKIE" ]
+then
+  COOKIE=$(cat /dev/urandom | head -c 123 | shasum -b | awk '{ print $1 }')
+fi
+
+# Default to 64 threads
+if [ -z "$THREAD_COUNT" ]
+then
+   THREAD_COUNT="64"
+fi
+
+stop(){
+  echo Shutting down server
+  erl \
+    -sname "shutdown" \
+    -setcookie $COOKIE \
+    -noinput \
+    -eval "rpc:call('$NODE', init, stop, []), init:stop()."
+}
+trap stop SIGQUIT SIGINT SIGTERM
+
+exec elixir \
+  -pa _build/prod/consolidated \
+  --no-halt \
+  --erl "+K true" \
+  --erl "-smp auto" \
+  --erl "+scl false" \
+  --erl "+spp true" \
+  --erl "+swt low" \
+  --erl "+sbwt long" \
+  --erl "+C multi_time_warp" \
+  --sname $NODE \
+  --cookie $COOKIE \
+  -S mix run \
+  &
+
+pid=$!
+sleep 0
+
+while kill -0 $pid 2>/dev/null ; do wait $pid ; done
