@@ -30,7 +30,8 @@
 #define BUFFER_SIZE   (16)
 #define SAMPLE_RATE   (44100.0)
 #define CHANNEL_COUNT (2)
-#define SECONDS_PER_FRAME (1.0 / SAMPLE_RATE)
+#define SECONDS_PER_FRAME  (1.0 / SAMPLE_RATE)
+#define USECONDS_PER_FRAME (USECONDS / SAMPLE_RATE)
 // used to work out the time offset of the active packet based on
 // its offset, which is in individual floats, not frames. However
 // the offset will always be a multiple of 2 so this is just a convenience
@@ -80,11 +81,10 @@ uint64_t current_time() {
 }
 
 uint64_t stream_time_to_absolute_time(
-		audio_callback_context *context,
-		PaTime   stream_time
+		const PaStreamCallbackTimeInfo*   timeInfo
 		) {
-	PaTime t = stream_time - context->stream_start_offset;
-	return context->stream_start_time + llround(t * USECONDS);
+	PaTime t = timeInfo->outputBufferDacTime - timeInfo->currentTime;
+	return current_time() + (uint64_t)llround(t * USECONDS);
 }
 
 bool load_next_packet(audio_callback_context *context)
@@ -99,6 +99,13 @@ bool load_next_packet(audio_callback_context *context)
 
 uint64_t packet_output_absolute_time(timestamped_packet *packet) {
 	return packet->timestamp + (uint64_t)llround(packet->offset * USECONDS_PER_FLOAT);
+}
+
+// returns +ve if the packet is ahead of where it's supposed to be
+//           0 if the packet is playing exactly at the right time
+// and     -ve if the packet is behind where it's supposed to be
+int64_t packet_output_offset_absolute_time(timestamped_packet *packet) {
+	return (int64_t)(packet_output_absolute_time(packet) - current_time());
 }
 
 unsigned long send_packet_with_offset(audio_callback_context *context,
@@ -137,12 +144,12 @@ void send_packet(audio_callback_context *context,
 	unsigned long requestedLen = frameCount * CHANNEL_COUNT;
 
 
-	uint64_t output_time = stream_time_to_absolute_time(context, timeInfo->outputBufferDacTime);
+	uint64_t output_time = stream_time_to_absolute_time(timeInfo);
 	uint64_t packet_time;
 
 	if (context->playing == false) {
 		packet      = context->active_packet;
-		output_time = stream_time_to_absolute_time(context, timeInfo->outputBufferDacTime);
+		output_time = stream_time_to_absolute_time(timeInfo);
 		packet_time = packet_output_absolute_time(packet);
 		// we want to wait for the right time to start playing the packet
 		if (packet_time > output_time) {
@@ -155,8 +162,8 @@ void send_packet(audio_callback_context *context,
 		} else if (output_time >= packet_time) {
 			// now we need to calculate the offset within the output stream to start inserting our packet
 			context->playing = true;
-			double diff     = (output_time - packet_time) / USECONDS; // seconds
-			long int offset = CHANNEL_COUNT * lround(diff / SECONDS_PER_FRAME);
+			double diff     = (output_time - packet_time); // seconds
+			long int offset = CHANNEL_COUNT * lround(diff / USECONDS_PER_FRAME);
 			if ((unsigned long)offset > requestedLen) {
 				// we're very late!
 				printf("%"PRIi64" %f -> VERY LATE PLAYBACK START %lu/%lu / %hu\r\n", output_time - packet_time, diff, offset, frameCount*CHANNEL_COUNT, packet->len);
@@ -205,7 +212,8 @@ void send_packet(audio_callback_context *context,
 	if ((context->callback_count % 400) == 0) {
 		packet      = context->active_packet;
 		packet_time = packet_output_absolute_time(packet);
-		printf("1: packet time: %"PRIu64"; output_time: %"PRIu64" = %"PRIi64"\r\n", packet_time, output_time, output_time - packet_time);
+		int64_t packet_offset = packet_output_offset_absolute_time(packet);
+		printf("1: packet offset: %"PRIi64" stream: [%f / %f = %f] %f\r\n", packet_offset, timeInfo->currentTime, timeInfo->outputBufferDacTime,  timeInfo->outputBufferDacTime - timeInfo->currentTime, timeInfo->currentTime - context->stream_start_offset);
 	}
 
 }
