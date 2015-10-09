@@ -1,13 +1,23 @@
 defmodule Janis do
   require Logger
+
+  @sample_freq        Application.get_env(:janis, :sample_freq, 44100)
+  @sample_bits        Application.get_env(:janis, :sample_bits, 16)
+  @sample_channels    Application.get_env(:janis, :sample_channels, 2)
+
   def start(_type, _args) do
     IO.inspect [:Janis, :start]
     Janis.Supervisor.start_link
   end
 
+  def sample_freq, do: @sample_freq
+  def sample_bits, do: @sample_bits
+  def sample_channels, do: @sample_channels
+
   def milliseconds do
     :erlang.monotonic_time(:milli_seconds)
   end
+
   def microseconds do
     :erlang.monotonic_time(:micro_seconds)
   end
