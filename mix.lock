@@ -1,5 +1,6 @@
 %{"c_monotonic_time": {:git, "git://github.com/magnetised/c_monotonic_time.git", "30b9573ed48bbed3ea77c417599dc9404475cb1e", []},
   "dnssd": {:git, "git://github.com/benoitc/dnssd_erlang.git", "9b2fdb7ff9618102d82f04e4c68ce191c9aa15ba", []},
+  "monotonic": {:git, "git://github.com/magnetised/monotonic.ex.git", "333b499b0e43e98ef69b32ab48d693539f33e925", []},
   "poison": {:hex, :poison, "1.5.0"},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "3bb48a893ff5598f7c73731ac17545206d259fac", []},
   "porcelain": {:hex, :porcelain, "2.0.0"},

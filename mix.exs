@@ -39,7 +39,7 @@ defmodule Janis.Mixfile do
       {:dnssd, github: "benoitc/dnssd_erlang"},
       {:poison, "~> 1.5"},
       {:poolboy, github: "devinus/poolboy"},
-      {:monotonic, path: "../monotonic"},
+      {:monotonic, github: "magnetised/monotonic.ex"},
     ]
   end
 end
