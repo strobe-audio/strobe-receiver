@@ -1,0 +1,7 @@
+#!/bin/bash
+
+## Usage: ./bin/sync-player user@player-address:/path/to/janis
+
+/usr/bin/rsync -avz --delete --exclude _build --exclude priv_dir --exclude deps --exclude c_src/\*.o --exclude .git . $1
+/usr/bin/rsync -avz --delete --exclude _build --exclude deps --exclude .git ../monotonic/ $1/../monotonic
+
