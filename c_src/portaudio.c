@@ -14,12 +14,14 @@
 #include <erl_driver.h>
 #include <ei.h>
 
-#include "endian.h"
 #include <portaudio.h>
+#include <samplerate.h>
+
+#include "endian.h"
 #include "pa_ringbuffer.h"
 #include "pa_util.h"
+#include "monotonic_time.h"
 
-#include <samplerate.h>
 
 #define PLAY_COMMAND  (1)
 #define TIME_COMMAND  (2)
@@ -58,12 +60,12 @@ typedef struct audio_callback_context {
 	PaUtilRingBuffer    audio_buffer;
 	timestamped_packet *audio_buffer_data;
 	timestamped_packet *active_packet;
-	PaTime              stream_start_offset;
 	uint64_t            stream_start_time;
 
 	uint64_t            callback_count;
 	PaTime              calculated_next_callback_time;
 	double              sample_rate_ratio;
+	PaTime latency;
 
 	bool                playing;
 
@@ -74,17 +76,13 @@ typedef struct portaudio_state {
 	audio_callback_context *audio_context;
 } portaudio_state;
 
-uint64_t current_time() {
-	struct timeval tv;
-	gettimeofday(&tv,NULL);
-	return (tv.tv_sec * (uint64_t)1000000) + tv.tv_usec;
-}
-
 uint64_t stream_time_to_absolute_time(
+		audio_callback_context *context,
+		uint64_t current_time,
 		const PaStreamCallbackTimeInfo*   timeInfo
 		) {
-	PaTime t = timeInfo->outputBufferDacTime - timeInfo->currentTime;
-	return current_time() + (uint64_t)llround(t * USECONDS);
+	PaTime t = timeInfo->outputBufferDacTime - context->latency - timeInfo->currentTime;
+	return current_time + (uint64_t)llround(t * USECONDS);
 }
 
 bool load_next_packet(audio_callback_context *context)
@@ -101,11 +99,14 @@ uint64_t packet_output_absolute_time(timestamped_packet *packet) {
 	return packet->timestamp + (uint64_t)llround(packet->offset * USECONDS_PER_FLOAT);
 }
 
-// returns +ve if the packet is ahead of where it's supposed to be
+// returns +ve if the packet is ahead of where it's supposed to be i.e. the audio is playing too fast
 //           0 if the packet is playing exactly at the right time
-// and     -ve if the packet is behind where it's supposed to be
-int64_t packet_output_offset_absolute_time(timestamped_packet *packet) {
-	return (int64_t)(packet_output_absolute_time(packet) - current_time());
+// and     -ve if the packet is behind where it's supposed to be i.e. the audio is playing too slowly
+int64_t packet_output_offset_absolute_time(
+		uint64_t current_time,
+		timestamped_packet *packet
+		) {
+	return (int64_t)(packet_output_absolute_time(packet) - current_time);
 }
 
 unsigned long send_packet_with_offset(audio_callback_context *context,
@@ -144,12 +145,14 @@ void send_packet(audio_callback_context *context,
 	unsigned long requestedLen = frameCount * CHANNEL_COUNT;
 
 
-	uint64_t output_time = stream_time_to_absolute_time(timeInfo);
+
+	uint64_t now = monotonic_microseconds();
+	uint64_t output_time;
 	uint64_t packet_time;
 
 	if (context->playing == false) {
 		packet      = context->active_packet;
-		output_time = stream_time_to_absolute_time(timeInfo);
+		output_time = stream_time_to_absolute_time(context, now, timeInfo);
 		packet_time = packet_output_absolute_time(packet);
 		// we want to wait for the right time to start playing the packet
 		if (packet_time > output_time) {
@@ -212,8 +215,8 @@ void send_packet(audio_callback_context *context,
 	if ((context->callback_count % 400) == 0) {
 		packet      = context->active_packet;
 		packet_time = packet_output_absolute_time(packet);
-		int64_t packet_offset = packet_output_offset_absolute_time(packet);
-		printf("1: packet offset: %"PRIi64" stream: [%f / %f = %f] %f\r\n", packet_offset, timeInfo->currentTime, timeInfo->outputBufferDacTime,  timeInfo->outputBufferDacTime - timeInfo->currentTime, timeInfo->currentTime - context->stream_start_offset);
+		int64_t packet_offset = packet_output_offset_absolute_time(now, packet);
+		printf("1: packet offset: %"PRIi64" stream: [%f / %f = %f]\r\n", packet_offset, timeInfo->currentTime, timeInfo->outputBufferDacTime,  timeInfo->outputBufferDacTime - timeInfo->currentTime);
 	}
 
 }
@@ -288,12 +291,23 @@ PaError initialize_audio_stream(audio_callback_context* context)
 	PaStreamParameters  outputParameters;
 	bool has_initialized = false;
 
-	printf("\rDRV: Pa_Initialize\r\n");
+	printf("== Pa_Initialize...\r\n");
 
 	err = Pa_Initialize();
 	if (err != paNoError) { goto error; }
 
+	printf("== Pa_Initialize complete\r\n");
+
 	has_initialized = true;
+
+	int numDevices, i;
+	numDevices = Pa_GetDeviceCount();
+
+	const   PaDeviceInfo *deviceInfo;
+	for( i=0; i<numDevices; i++ ) {
+		deviceInfo = Pa_GetDeviceInfo( i );
+		printf("-- Available device %s\r\n", deviceInfo->name);
+	}
 
 	outputParameters.device = Pa_GetDefaultOutputDevice(); //Take the default output device.
 
@@ -301,6 +315,10 @@ PaError initialize_audio_stream(audio_callback_context* context)
 		fprintf(stderr,"\rError: No default output device.\r\n");
 		goto error;
 	}
+
+	deviceInfo = Pa_GetDeviceInfo(outputParameters.device);
+
+	printf("== Using Device %s\r\n", deviceInfo->name);
 
 	outputParameters.channelCount = CHANNEL_COUNT;                     /* Stereo output, most likely supported. */
 	outputParameters.hostApiSpecificStreamInfo = NULL;
@@ -322,6 +340,8 @@ PaError initialize_audio_stream(audio_callback_context* context)
 
 	if (err != paNoError) { goto error; }
 
+	context->latency = latency;
+
 	context->audio_stream = stream;
 
 	err = Pa_GetSampleSize(outputParameters.sampleFormat);
@@ -334,14 +354,13 @@ PaError initialize_audio_stream(audio_callback_context* context)
 
 	if (err != paNoError) { goto error; }
 
-	PaTime stream_time = Pa_GetStreamTime(stream);
+	/* PaTime stream_time = Pa_GetStreamTime(stream); */
+  /*  */
+	/* if (stream_time == 0) { goto error; } */
 
-	if (stream_time == 0) { goto error; }
+	context->stream_start_time = monotonic_microseconds();
 
-	context->stream_start_time = current_time();
-	context->stream_start_offset = stream_time;
-
-	printf("stream start at %" PRIu64 "/ %f\r\n", context->stream_start_time, context->stream_start_offset);
+	printf("stream start at %" PRIu64 "\r\n", context->stream_start_time);
 
 	return paNoError;
 
@@ -477,7 +496,7 @@ static ErlDrvSSizeT portaudio_drv_control(
 
 		encode_response(*rbuf, &index, buffer_size);
 	} else if (cmd == TIME_COMMAND) {
-		uint64_t t = current_time();
+		uint64_t t = monotonic_microseconds();
 		ei_encode_tuple_header(*rbuf, &index, 2);
 		ei_encode_atom(*rbuf, &index, "ok");
 		ei_encode_ulonglong(*rbuf, &index, t);

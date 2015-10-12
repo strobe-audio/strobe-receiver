@@ -1,6 +1,7 @@
 
 defmodule Janis.Player.Emitter do
   require Logger
+  use     Monotonic
 
   def emit(emitter, packet) do
     send(emitter, {:emit, packet})
@@ -42,7 +43,7 @@ defmodule Janis.Player.Emitter do
     Logger.disable(self)
     {t, _} = packet
     # Logger.debug "Start emitter #{t - current_time}"
-    state = {{Janis.microseconds, n, d}, packet, _config}
+    state = {{monotonic_microseconds, n, d}, packet, _config}
     test_packet state
   end
 
@@ -68,7 +69,7 @@ defmodule Janis.Player.Emitter do
   @jitter 500
 
   def loop_tight({{t, n, d}, {timestamp, _data}, _config}) do
-    now = current_time
+    now = monotonic_microseconds
     state = {{now, n, d}, {timestamp, _data}, _config}
     case timestamp - now do
       x when x <= @jitter ->
@@ -80,7 +81,7 @@ defmodule Janis.Player.Emitter do
   end
 
   def play_frame({_loop, {timestamp, data}, {_pi, _ps, pool} = _config} = state) do
-    delta = current_time - timestamp
+    delta = monotonic_microseconds - timestamp
     msg = "Play frame.. #{delta}"
     case delta do
       _ when delta <= 0 ->
@@ -126,7 +127,7 @@ defmodule Janis.Player.Emitter do
 
   def new_state({{t, n, d}, packet, config}) do
     m = n+1
-    now = current_time
+    now = monotonic_microseconds
     delay = case d do
       0 -> now - t
       _ -> (((n * d) + (now - t)) / m)
@@ -135,10 +136,6 @@ defmodule Janis.Player.Emitter do
     #   Logger.debug "#{now}, #{m}, #{delay}"
     # end
     {{now, m, delay}, packet, config}
-  end
-
-  def current_time do
-    Janis.microseconds
   end
 
   def terminate(reason) do

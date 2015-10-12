@@ -14,14 +14,6 @@ defmodule Janis do
   def sample_bits, do: @sample_bits
   def sample_channels, do: @sample_channels
 
-  def milliseconds do
-    :erlang.monotonic_time(:milli_seconds)
-  end
-
-  def microseconds do
-    :erlang.monotonic_time(:micro_seconds)
-  end
-
   def broadcaster_connect(service, address, port, config) do
     Logger.info "Broadcaster ONLINE     #{address}:#{port} #{inspect config}"
     Janis.Broadcaster.start_broadcaster(service, address, port, config)

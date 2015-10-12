@@ -1,6 +1,7 @@
 defmodule Janis.Audio do
+  use Monotonic
 
-  @name Janis.Audio
+  @name           Janis.Audio
   @implementation Janis.Audio.PortAudio
 
   def start_link do
@@ -21,7 +22,7 @@ defmodule Janis.Audio do
     {:ok, data} = File.open "../audio/176400-shubert-piano-quintet.raw", [:read], fn(file) ->
       IO.binread file, :all
     end
-    now = Janis.microseconds
+    now = monotonic_microseconds
     Enum.each 0..c, fn(i) ->
       skip_bytes = 3528*i
       << _skip::binary-size(skip_bytes), packet::binary-size(3528), data::binary >> = data

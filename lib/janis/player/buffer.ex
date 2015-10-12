@@ -1,5 +1,6 @@
 defmodule Janis.Player.Buffer do
   use     GenServer
+  use     Monotonic
   require Logger
 
   @moduledoc """
@@ -72,9 +73,8 @@ defmodule Janis.Player.Buffer do
   end
 
   def cons(packet, queue, count) do
-    now = Janis.microseconds
     translated_packet = {timestamp, _data} = Janis.Broadcaster.translate_packet(packet)
-    # Logger.debug "put #{timestamp - now}"
+    # Logger.debug "put #{timestamp - monotonic_microseconds}"
     queue = :queue.in(translated_packet, queue)
     monitor_queue_length(queue, count)
   end
@@ -86,7 +86,7 @@ defmodule Janis.Player.Buffer do
   def maybe_emit_packets(queue, %S{stream_info: {interval_ms, _size}} = state) do
 
     packets = :queue.to_list(queue)
-    now = Janis.microseconds
+    now = monotonic_microseconds
     interval_us = interval_ms * 1000
 
     {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
@@ -103,7 +103,7 @@ defmodule Janis.Player.Buffer do
     state
     # case :queue.peek(queue) do
     #   {:value, {first_timestamp, _} = first_packet} ->
-    #     case first_timestamp - Janis.microseconds do
+    #     case first_timestamp - monotonic_microseconds do
     #       i when i < interval_us ->
     #         state = emit_packet(state, first_packet)
     #         queue = :queue.drop(queue)
@@ -126,7 +126,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def emit_packet(state, packet) do
-    # Logger.debug "emt #{Janis.milliseconds}"
+    # Logger.debug "emt #{monotonic_microseconds}"
     Janis.Audio.play(packet)
     state
   end

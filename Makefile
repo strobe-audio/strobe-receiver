@@ -26,7 +26,7 @@ AUDIO_LIBS    = -L/usr/local/lib -lportaudio -lsamplerate
 STD_LIBS      = -lm
 
 HEADER_FILES = c_src
-SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c
+SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c c_src/monotonic_time.c
 
 OBJECT_FILES = $(SOURCE_FILES:.c=.o)
 
@@ -36,6 +36,11 @@ ifeq ($(OS), Darwin)
 	EXTRA_OPTIONS = -fno-common -bundle -undefined suppress -flat_namespace
 else
 	EXTRA_OPTIONS = -shared
+endif
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	AUDIO_LIBS += -lrt -lasound -lpthread
 endif
 
 default: all

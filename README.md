@@ -9,6 +9,20 @@ Janis.Player.play song
 
 ```
 
+Dependencies
+------------
+
+- erlang 18.x
+
+- elixir 1.x
+
+- `portaudio`
+     sudo apt-get install -y portaudio19-dev
+
+- `libsamplerate`:
+     sudo apt-get install -y libsamplerate0 libsamplerate0-dev
+
+
 Soft real-time
 --------------
 

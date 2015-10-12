@@ -1,5 +1,6 @@
 defmodule Janis.Audio.PortAudio do
   require Logger
+  use     Monotonic
   use     GenServer
 
   @shared_lib  "portaudio"
@@ -34,7 +35,7 @@ defmodule Janis.Audio.PortAudio do
 
   def handle_call(:time, _from, {port} = state) do
     {:ok, c_time} = Port.control(port, @time_command, <<>>) |> decode_port_response
-    {:reply, {:ok, c_time, convert_timestamp(Janis.microseconds)}, state}
+    {:reply, {:ok, c_time, monotonic_microseconds}, state}
   end
 
   def handle_cast({:play, {_timestamp, _data} = packet}, {port} = state) do
@@ -102,14 +103,9 @@ defmodule Janis.Audio.PortAudio do
     end
   end
 
-  defp convert_timestamp(timestamp) do
-    timestamp + :erlang.time_offset(:micro_seconds)
-  end
-
   defp audio_packet({timestamp, data}) do
-    time = convert_timestamp(timestamp)
     len = byte_size(data)
     # Logger.debug "Packet time: #{time}; len: #{len} data: #{inspect data}"
-    << time::size(64)-little-unsigned-integer, len::size(16)-little-unsigned-integer, data::binary >>
+    << timestamp::size(64)-little-unsigned-integer, len::size(16)-little-unsigned-integer, data::binary >>
   end
 end

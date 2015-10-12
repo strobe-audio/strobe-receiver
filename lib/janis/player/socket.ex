@@ -1,4 +1,5 @@
 defmodule Janis.Player.Socket do
+  use     Monotonic
   use     GenServer
   require Logger
 
@@ -25,11 +26,11 @@ defmodule Janis.Player.Socket do
     << _count::size(64)-little-unsigned-integer, timestamp::size(64)-little-signed-integer, audio::binary >> = data
     state = case {timestamp, audio} do
       {0, <<>>}  ->
-        # Logger.debug "stp #{Janis.milliseconds}"
+        # Logger.debug "stp #{monotonic_milliseconds}"
         Janis.Player.Buffer.stop(buffer)
         state
       _ ->
-        # Logger.debug "rec #{Janis.milliseconds}"
+        # Logger.debug "rec #{monotonic_milliseconds}"
         put({timestamp, audio}, state)
     end
     {:noreply, state}

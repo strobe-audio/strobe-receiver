@@ -1,5 +1,6 @@
 defmodule Janis.Broadcaster.SNTP do
   use GenServer
+  use Monotonic
 
   @name Janis.Broadcaster.SNTP
 
@@ -28,7 +29,7 @@ defmodule Janis.Broadcaster.SNTP do
 
     packet = <<
     count::size(64)-little-unsigned-integer,
-    Janis.microseconds::size(64)-little-signed-integer
+    monotonic_microseconds::size(64)-little-signed-integer
     >>
     :ok = :gen_udp.send(socket, address, port, packet)
 
@@ -46,7 +47,7 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   defp parse_response({:ok, {_addr, _port, data}}) do
-    now = Janis.microseconds
+    now = monotonic_microseconds
     << count::size(64)-little-unsigned-integer,
        originate::size(64)-little-signed-integer,
        receipt::size(64)-little-signed-integer,
