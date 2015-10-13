@@ -53,10 +53,13 @@ void sample_least_squares(UT_ringbuffer *playback_samples, playback_state_t *pla
     sum_xy = sum_xy + (double)(x * s->o);
     sum_xx = sum_xx + (x * x);
   }
-	if (n == 0) {
+	double d = ( sum_x*sum_x - n*sum_xx );
+
+	if (n == 0 || d == 0.0) {
 		return;
 	}
-  slope = ( sum_x*sum_y - n*sum_xy ) / ( sum_x*sum_x - n*sum_xx );
+
+  slope = ( sum_x*sum_y - n*sum_xy ) / d;
   y_intercept = ( sum_y - slope*sum_x ) / n;
 
 

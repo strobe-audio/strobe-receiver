@@ -33,7 +33,9 @@ void stream_stats_update(stream_statistics_t *stats, double new) {
 		}
 		double oldavg = stats->average;
 		double d = new - stats->last_value;
-	 	double newavg = oldavg + (d / n);
+	 	/* double newavg = oldavg + (d / n); */
+		// exponential avg https://en.wikipedia.org/wiki/Moving_average
+		double newavg = new + (0.999 * (oldavg - new));
 		stats->average = newavg;
 		stats->variance += d * ( new - newavg + stats->last_value - oldavg) / (n - 1);
 		stats->stddev = sqrt(stats->variance);
