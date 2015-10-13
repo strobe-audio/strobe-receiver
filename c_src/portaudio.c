@@ -215,7 +215,9 @@ void send_packet(audio_callback_context *context,
 	stream_sample_t sample  = { .t = now, .o = packet_offset };
 	/* printf("sample %"PRIu64" %"PRIi64"\r\n", sample.t, sample.o); */
 	utringbuffer_push_back(context->playback_samples, &sample);
-	if ((context->callback_count % STREAM_SAMPLE_SIZE) == 0) {
+	if ((utringbuffer_len(context->playback_samples) >= STREAM_SAMPLE_SIZE)
+			&& (context->callback_count % STREAM_SAMPLE_SIZE) == 0)
+	{
 		sample_least_squares(context->playback_samples, &state);
 		stream_stats_update(context->playback_ratio_stats, state.ratio);
 		stream_stats_update(context->timestamp_offset_stats, state.timestamp_delta);
@@ -240,12 +242,12 @@ void send_packet(audio_callback_context *context,
 	}
 
 	if ((context->callback_count % 400) == 0) {
-		packet      = context->active_packet;
-		packet_time = packet_output_absolute_time(packet);
-		int64_t packet_offset = packet_output_offset_absolute_time(now, packet);
+		/* packet      = context->active_packet; */
+		/* packet_time = packet_output_absolute_time(packet); */
+		/* int64_t packet_offset = packet_output_offset_absolute_time(now, packet); */
 
-		printf ("ratio: %lf +- %lf; timestamp_delta: %lf +- %lf\r\n", context->playback_ratio_stats->average, context->playback_ratio_stats->stddev, context->timestamp_offset_stats->average, context->timestamp_offset_stats->stddev);
-		printf("1: packet offset: %"PRIi64" stream: [%f / %f = %f]\r\n", packet_offset, timeInfo->currentTime, timeInfo->outputBufferDacTime,  timeInfo->outputBufferDacTime - timeInfo->currentTime);
+		printf ("ratio: %lf++%lf; timestamp_delta: %lf++%lf / %"PRIi64"\r\n", context->playback_ratio_stats->average, context->playback_ratio_stats->stddev, context->timestamp_offset_stats->average, context->timestamp_offset_stats->stddev, packet_offset);
+		/* printf("1: packet offset: %"PRIi64" stream: [%f / %f = %f]\r\n", packet_offset, timeInfo->currentTime, timeInfo->outputBufferDacTime,  timeInfo->outputBufferDacTime - timeInfo->currentTime); */
 	}
 
 }
