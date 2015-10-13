@@ -22,6 +22,39 @@ Dependencies
 - `libsamplerate`:
      sudo apt-get install -y libsamplerate0 libsamplerate0-dev
 
+TODO
+----
+
+- Improve OS X monotonic time function. e.g. using https://github.com/ChisholmKyle/PosixMachTiming/blob/master/src/timing_test.c
+
+Calculate re-sampling needed
+----------------------------
+
+Trying to figure out the real playback rate of the audio card so we can
+re-sample the audio data to keep the playback rate at the one dictated by the
+server is like trying to fit a line to a set of data points: we're looking for
+the gradient of the line becauase this tells us the difference in rates between
+the server stream time and the playback rate.
+
+So the measurements for this would be
+  - `t`: the absolute/monotonic time
+  - `ẟp`: the difference between the active packet's actual time offset
+    (calculated by taking the packets given timestamp and adding on the number
+    of samples played / time per sample) and the one calculated from `t -
+    timestamp`. That is comparing the actual time since the packet's timestamp
+    and the `audio time` defined in terms of frames per second (at a playback
+    rate of 44100 frames per second)
+
+This is called a ['linear regresssion'][] or, more precisely a 'simple linear regression'
+
+But normally for a linear regression, you take the entire sample and perform
+the calculation once. What I need to do is calculate the value based on some
+kind of rolling, fixed-size, sample.
+
+http://stats.stackexchange.com/questions/6920/efficient-online-linear-regression
+https://en.wikipedia.org/wiki/Design_matrix#Simple_Regression
+
+[linear regression]: https://en.wikipedia.org/wiki/Linear_regression
 
 Soft real-time
 --------------

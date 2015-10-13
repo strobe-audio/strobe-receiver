@@ -21,7 +21,14 @@
 #include "pa_ringbuffer.h"
 #include "pa_util.h"
 #include "monotonic_time.h"
+#include "least_squares.h"
+#include "stream_statistics.h"
 
+// http://portaudio.com/docs/v19-doxydocs/compile_linux.html
+#ifdef __linux__
+#define __alsa__
+#include <pa_linux_alsa.h>
+#endif
 
 #define PLAY_COMMAND  (1)
 #define TIME_COMMAND  (2)
@@ -40,12 +47,16 @@
 #define SECONDS_PER_FLOAT (1.0 / (SAMPLE_RATE * CHANNEL_COUNT))
 #define USECONDS_PER_FLOAT (USECONDS * SECONDS_PER_FLOAT)
 
+#define STREAM_STATS_WINDOW_SIZE 1000
+
 // http://stackoverflow.com/questions/3599160/unused-parameter-warnings-in-c-code
 #define UNUSED(x) (void)(x)
 
 #define CLEAR_OUTPUT_EVERY_FRAME 1
 
 // https://github.com/squidfunk/generic-linked-in-driver/blob/master/c_src/gen_driver.c
+
+UT_icd stream_sample_icd = {sizeof(stream_sample_t), NULL, NULL, NULL};
 
 typedef struct timestamped_packet {
 	uint64_t timestamp;
@@ -63,11 +74,14 @@ typedef struct audio_callback_context {
 	uint64_t            stream_start_time;
 
 	uint64_t            callback_count;
-	PaTime              calculated_next_callback_time;
-	double              sample_rate_ratio;
-	PaTime latency;
+	PaTime              latency;
 
 	bool                playing;
+
+	UT_ringbuffer        *playback_samples;
+
+	stream_statistics_t  *playback_ratio_stats;
+	stream_statistics_t  *timestamp_offset_stats;
 
 } audio_callback_context;
 
@@ -150,6 +164,8 @@ void send_packet(audio_callback_context *context,
 	uint64_t output_time;
 	uint64_t packet_time;
 
+	playback_state_t state;
+
 	if (context->playing == false) {
 		packet      = context->active_packet;
 		output_time = stream_time_to_absolute_time(context, now, timeInfo);
@@ -191,8 +207,18 @@ void send_packet(audio_callback_context *context,
 			// we're done
 			return;
 		}
-	} else {
-		// well. we need to be re-sampling the packets - perhaps here is where that's done
+	}
+
+	packet      = context->active_packet;
+	packet_time = packet_output_absolute_time(packet);
+	int64_t packet_offset = packet_output_offset_absolute_time(now, packet);
+	stream_sample_t sample  = { .t = now, .o = packet_offset };
+	/* printf("sample %"PRIu64" %"PRIi64"\r\n", sample.t, sample.o); */
+	utringbuffer_push_back(context->playback_samples, &sample);
+	if ((context->callback_count % STREAM_SAMPLE_SIZE) == 0) {
+		sample_least_squares(context->playback_samples, &state);
+		stream_stats_update(context->playback_ratio_stats, state.ratio);
+		stream_stats_update(context->timestamp_offset_stats, state.timestamp_delta);
 	}
 
 
@@ -212,10 +238,13 @@ void send_packet(audio_callback_context *context,
 #endif
 		}
 	}
+
 	if ((context->callback_count % 400) == 0) {
 		packet      = context->active_packet;
 		packet_time = packet_output_absolute_time(packet);
 		int64_t packet_offset = packet_output_offset_absolute_time(now, packet);
+
+		printf ("ratio: %lf +- %lf; timestamp_delta: %lf +- %lf\r\n", context->playback_ratio_stats->average, context->playback_ratio_stats->stddev, context->timestamp_offset_stats->average, context->timestamp_offset_stats->stddev);
 		printf("1: packet offset: %"PRIi64" stream: [%f / %f = %f]\r\n", packet_offset, timeInfo->currentTime, timeInfo->outputBufferDacTime,  timeInfo->outputBufferDacTime - timeInfo->currentTime);
 	}
 
@@ -249,19 +278,6 @@ static int audio_callback(const void* _input,
 	memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
 #endif
 
-	if (context->calculated_next_callback_time) {
-		// work out the sample rate ratio based on the difference between
-		// the calculated time and the time given in timeInfo->outputBufferDacTime
-		//
-		// TODO: On my mac this always gives a diff of 0.00000 -- is this real of just
-		// portaudio shuffling its internal time to be consistent with the audio card?
-		// Need to compare the stream times with the wall times to verify the stream clock
-		//
-		/* printf("callback time diff %f / %f = %f\r\n", timeInfo->outputBufferDacTime, context->calculated_next_callback_time, (timeInfo->outputBufferDacTime - context->calculated_next_callback_time)); */
-	}
-
-	// work out the calculated_next_callback_time
-	context->calculated_next_callback_time = timeInfo->outputBufferDacTime + (frameCount * SECONDS_PER_FRAME);
 
 	/* printf("requested %lu frames\r\n", frameCount); */
 
@@ -340,6 +356,11 @@ PaError initialize_audio_stream(audio_callback_context* context)
 
 	if (err != paNoError) { goto error; }
 
+#ifdef __alsa__
+	printf("== Enabling realtime scheduling...\r\n");
+	PaAlsa_EnableRealtimeScheduling(&stream, 1);
+#endif
+
 	context->latency = latency;
 
 	context->audio_stream = stream;
@@ -391,14 +412,21 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 		goto error;
 	}
 
+	utringbuffer_new(context->playback_samples, STREAM_SAMPLE_SIZE, &stream_sample_icd);
+
+	context->playback_ratio_stats = driver_alloc(sizeof(stream_statistics_t));
+	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
+
+
+	stream_stats_init(context->playback_ratio_stats, STREAM_STATS_WINDOW_SIZE);
+	stream_stats_init(context->timestamp_offset_stats, STREAM_STATS_WINDOW_SIZE);
+
 	context->active_packet->timestamp      = 0;
 	context->active_packet->len            = 0;
 	context->active_packet->offset         = 0;
 
 	// initialize stats on context
 	context->callback_count                = (uint64_t)0;
-	context->sample_rate_ratio             = (double)  0.0;
-	context->calculated_next_callback_time = (double)  0.0;
 	context->playing                       = false;
 
 	PaUtil_InitializeRingBuffer(&context->audio_buffer, sizeof(timestamped_packet), BUFFER_SIZE, context->audio_buffer_data);
@@ -442,6 +470,9 @@ static void portaudio_drv_stop(ErlDrvData drv_data) {
 	audio_callback_context *context = state->audio_context;
 	stop_audio(context);
 	printf("\rDRV: free\r\n");
+	utringbuffer_free(context->playback_samples);
+	driver_free((char*)context->playback_ratio_stats);
+	driver_free((char*)context->timestamp_offset_stats);
 	driver_free((char*)context->audio_buffer_data);
 	driver_free((char*)context->active_packet);
 	driver_free((char*)context);
