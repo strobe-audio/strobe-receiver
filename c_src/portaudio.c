@@ -68,6 +68,8 @@ typedef struct timestamped_packet {
 	uint64_t timestamp;
 	uint16_t len; // number of floats, not byte size
 	uint16_t offset;    // number of floats, not byte size
+	uint16_t played;    // number of floats, not byte size
+
 	float    data[PACKET_SIZE];
 } timestamped_packet;
 
@@ -170,7 +172,7 @@ uint64_t stream_time_to_absolute_time(
 
 
 uint64_t packet_output_absolute_time(timestamped_packet *packet) {
-	return packet->timestamp + (uint64_t)llround(packet->offset * USECONDS_PER_FLOAT);
+	return packet->timestamp + (uint64_t)llround(packet->played * USECONDS_PER_FLOAT);
 }
 
 // returns +ve if the packet is ahead of where it's supposed to be i.e. the audio is playing too fast
@@ -544,6 +546,7 @@ static ErlDrvSSizeT portaudio_drv_control(
 		uint16_t len  = le16toh(*(uint16_t *) (buf + 8));
 		struct timestamped_packet packet = {
 			.offset = 0,
+			.played = 0,
 			.timestamp = time,
 			.len = len / 2
 		};
