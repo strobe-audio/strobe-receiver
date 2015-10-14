@@ -2,6 +2,7 @@
 #define _BSD_SOURCE
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
@@ -10,6 +11,8 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <sys/param.h>
+
 
 #include <erl_driver.h>
 #include <ei.h>
@@ -41,6 +44,7 @@
 #define CHANNEL_COUNT (2)
 #define SECONDS_PER_FRAME  (1.0 / SAMPLE_RATE)
 #define USECONDS_PER_FRAME (USECONDS / SAMPLE_RATE)
+#define FRAMES_PER_USECONDS (SAMPLE_RATE / USECONDS)
 // used to work out the time offset of the active packet based on
 // its offset, which is in individual floats, not frames. However
 // the offset will always be a multiple of 2 so this is just a convenience
@@ -83,6 +87,7 @@ typedef struct audio_callback_context {
 	stream_statistics_t  *playback_ratio_stats;
 	stream_statistics_t  *timestamp_offset_stats;
 
+	SRC_STATE            *resampler;
 } audio_callback_context;
 
 typedef struct portaudio_state {
@@ -215,31 +220,119 @@ void send_packet(audio_callback_context *context,
 	stream_sample_t sample  = { .t = now, .o = packet_offset };
 	/* printf("sample %"PRIu64" %"PRIi64"\r\n", sample.t, sample.o); */
 	utringbuffer_push_back(context->playback_samples, &sample);
+	stream_stats_update(context->timestamp_offset_stats, packet_offset);
+
+	// update the estimated playback ratio
 	if ((utringbuffer_len(context->playback_samples) >= STREAM_SAMPLE_SIZE)
 			&& (context->callback_count % STREAM_SAMPLE_SIZE) == 0)
 	{
 		sample_least_squares(context->playback_samples, &state);
 		stream_stats_update(context->playback_ratio_stats, state.ratio);
-		stream_stats_update(context->timestamp_offset_stats, state.timestamp_delta);
 	}
 
+	unsigned long remaining;
+
+	const int max_frame_delta = 1;
+	if (utringbuffer_len(context->playback_samples) >= STREAM_SAMPLE_SIZE) {
+		double timestamp_offset = (double)context->timestamp_offset_stats->average;
+		double abs_timestamp_offset = fabs(timestamp_offset);
+		//
+		// need to decide the max speed up/slow down we will allow - it might be
+		// greater than I think...
+		//requestedLen
+		int max_frames = (int)frameCount + max_frame_delta;
+
+		// move this somewhere?
+		float original[max_frames * CHANNEL_COUNT];
+		float resampled[requestedLen];
+		int resample_to_frames = max_frames;
+		uint64_t offset_frames = abs_timestamp_offset * FRAMES_PER_USECONDS;
+		double resample_ratio = 0.0;
+		bool resample = false;
+
+		if (true && abs_timestamp_offset >= 500) {
+			if (timestamp_offset > 0) {
+				// if this is +ve the playback needs to be slowed down by making fewer audio samples
+				// take more time until the actual time has caught up with the stream time
+				if (offset_frames > 0) {
+					offset_frames = MIN(offset_frames, max_frame_delta);
+				}
+
+				resample_to_frames = (frameCount - offset_frames);
+
+
+			} else {
+				// if it's -ve then the stream is behind & we need to eat some samples up
+				// in order to sync the times. we eat up samples by making each packet frame take
+				// less real time by resampling to a higher freq.
+				// 1. work out how many frames we are out by
+				// 2. if this is <= our max allowed number of frames then
+				//    resample this increased number of frames to the requested number of frames
+				// 3. If this is > our max allowed number of frames then resample
+				//    to the max number of frames
+
+				if (offset_frames > 0) {
+					offset_frames = MIN(offset_frames, max_frame_delta);
+				}
+
+				resample_to_frames = (frameCount + offset_frames);
+
+			}
+			if (resample_to_frames != (int)frameCount) {
+				requestedLen = resample_to_frames * CHANNEL_COUNT;
+				resample_ratio = (double)resample_to_frames / (double)frameCount;
+				resample = true;
+				/* printf("%f need %"PRIu64"/%d %lu %d %f\r\n", timestamp_offset, offset_frames, max_frames, frameCount, resample_to_frames, resample_ratio); */
+			}
+		}
+
+		len = send_packet_with_offset(context, original, requestedLen, 0);
+		if (len < requestedLen) {
+			remaining = requestedLen - len;
+			if (load_next_packet(context)) {
+				len += send_packet_with_offset(context, original, remaining, len);
+			}
+		}
+		// now resample original -> final
+		if (resample) {
+			SRC_DATA data = {
+				.data_in = original,
+				.input_frames = resample_to_frames,
+				.data_out = resampled,
+				.output_frames = frameCount,
+				.src_ratio = resample_ratio,
+				.end_of_input = 0
+			};
+			src_set_ratio(context->resampler, resample_ratio);
+			int src_error = src_process(context->resampler, &data);
+			if (src_error != 0) {
+				printf("got error from resampling %d\r\n", src_error);
+			}
+			/* printf("resampled %d\r\n", data.output_frames_gen); */
+			memcpy(out, resampled, data.output_frames_gen * context->sample_size);
+		} else {
+			memcpy(out, original, len * context->sample_size);
+		}
+
+	} else {
+		len = send_packet_with_offset(context, out, requestedLen, 0);
+
+		if (len < requestedLen) {
+			// i've obviously used up the active_packet so it's safe to just load the next one
+			remaining = requestedLen - len;
+			if (load_next_packet(context)) {
+				len = send_packet_with_offset(context, out, remaining, len);
+			} else {
+#ifndef CLEAR_OUTPUT_EVERY_FRAME
+				memset(out+len, 0, remaining * context->sample_size);
+#endif
+			}
+		}
+	}
 
 	////////////////////////////////
 
 
-	len = send_packet_with_offset(context, out, requestedLen, 0);
-
-	if (len < requestedLen) {
-		// i've obviously used up the active_packet so it's safe to just load the next one
-		unsigned long remaining = requestedLen - len;
-		if (load_next_packet(context)) {
-			len = send_packet_with_offset(context, out, remaining, len);
-		} else {
-#ifndef CLEAR_OUTPUT_EVERY_FRAME
-			memset(out+len, 0, remaining * context->sample_size);
-#endif
-		}
-	}
 
 	if ((context->callback_count % 400) == 0) {
 		/* packet      = context->active_packet; */
@@ -441,6 +534,13 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 	state->port = port;
 	state->audio_context = context;
 
+	int src_error = 0;
+	context->resampler = src_new(SRC_SINC_FASTEST, CHANNEL_COUNT, &src_error);
+
+	if (context->resampler == NULL && (src_error != 0)) {
+		printf("!! Error initializing resampler %d\r\n", src_error);
+		goto error;
+	}
 
 	return (ErlDrvData)state;
 
@@ -472,7 +572,10 @@ static void portaudio_drv_stop(ErlDrvData drv_data) {
 	audio_callback_context *context = state->audio_context;
 	stop_audio(context);
 	printf("\rDRV: free\r\n");
+
+	src_delete(context->resampler);
 	utringbuffer_free(context->playback_samples);
+
 	driver_free((char*)context->playback_ratio_stats);
 	driver_free((char*)context->timestamp_offset_stats);
 	driver_free((char*)context->audio_buffer_data);
