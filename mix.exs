@@ -36,10 +36,10 @@ defmodule Janis.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     [ {:socket, "~> 0.3.0"},
-      {:dnssd, github: "benoitc/dnssd_erlang"},
+      {:dnssd, git: "https://github.com/benoitc/dnssd_erlang.git"},
       {:poison, "~> 1.5"},
-      {:poolboy, github: "devinus/poolboy"},
-      {:monotonic, github: "magnetised/monotonic.ex"},
+      {:poolboy, git: "https://github.com/devinus/poolboy.git"},
+      {:monotonic, git: "https://github.com/magnetised/monotonic.ex.git"},
     ]
   end
 end

@@ -1,7 +1,7 @@
-%{"c_monotonic_time": {:git, "git://github.com/magnetised/c_monotonic_time.git", "a24bee75ac0ab65e7674727a93137b9d025fb72d", []},
-  "dnssd": {:git, "git://github.com/benoitc/dnssd_erlang.git", "9b2fdb7ff9618102d82f04e4c68ce191c9aa15ba", []},
-  "monotonic": {:git, "git://github.com/magnetised/monotonic.ex.git", "333b499b0e43e98ef69b32ab48d693539f33e925", []},
+%{"c_monotonic_time": {:git, "https://github.com/magnetised/c_monotonic_time.git", "a24bee75ac0ab65e7674727a93137b9d025fb72d", []},
+  "dnssd": {:git, "https://github.com/benoitc/dnssd_erlang.git", "9b2fdb7ff9618102d82f04e4c68ce191c9aa15ba", []},
+  "monotonic": {:git, "https://github.com/magnetised/monotonic.ex.git", "577c7b645850bcb44c4c2d03014178567fad833f", []},
   "poison": {:hex, :poison, "1.5.0"},
-  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "3bb48a893ff5598f7c73731ac17545206d259fac", []},
+  "poolboy": {:git, "https://github.com/devinus/poolboy.git", "3bb48a893ff5598f7c73731ac17545206d259fac", []},
   "porcelain": {:hex, :porcelain, "2.0.0"},
   "socket": {:hex, :socket, "0.3.1"}}
