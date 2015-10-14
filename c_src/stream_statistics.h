@@ -1,6 +1,8 @@
 #include <inttypes.h>
 #include <math.h>
 
+#define INITIAL_SAMPLE_SIZE (10)
+
 typedef struct {
 	uint64_t  c; //number of samples taken
 	int	      n; // window size
@@ -8,6 +10,8 @@ typedef struct {
 	double  	average;
 	double  	variance;
 	double  	stddev;    // sqrt(variance)
+	double    initial[INITIAL_SAMPLE_SIZE];
+	int       i;
 } stream_statistics_t;
 
 

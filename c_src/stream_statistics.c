@@ -1,11 +1,20 @@
 #include "stream_statistics.h"
 #include <stdio.h>
 
+// where α is the smoothing factor, and 0 < α < 1. In other words, the smoothed
+// statistic st is a simple weighted average of the current observation xt and the
+// previous smoothed statistic st−1. The term smoothing factor applied to α here
+// is something of a misnomer, as larger values of α actually reduce the level of
+// smoothing, and in the limiting case with α = 1 the output series is just the
+// same as the original series
+#define ALPHA (0.0001)
+
 // taken from:
 // http://jonisalonen.com/2014/efficient-and-accurate-rolling-standard-deviation/
 //
 void stream_stats_init(stream_statistics_t *stats, int window_size) {
 	stats->c = 0;
+	stats->i = 0;
 	stats->n = window_size;
 	stats->last_value = 0.;
 	stats->average    = 0.;
@@ -13,39 +22,37 @@ void stream_stats_init(stream_statistics_t *stats, int window_size) {
 	/* stats->stddev     = 0.; */
 }
 
+double initial_average(stream_statistics_t *stats) {
+	double total = 0.0;
+	for (int i = 0; i < stats->i; ++i) {
+		total += stats->initial[i];
+	}
+	return total/((double)(stats->i));
+}
+
 void stream_stats_reset(stream_statistics_t *stats) {
 	stats->c = 0;
+	stats->i = 0;
 }
 
 void stream_stats_update(stream_statistics_t *stats, double new) {
 	if (isnan(new)) {
 		return;
 	}
-	//printf("update: %f\r\n", new);
-	if (stats->c == 0) {
-		stats->average    = new;
-	} else if (stats->c < 2) {
-		stats->average = (stats->last_value + new) / 2.0;
-		//printf("update: %"PRIu64"; new: %f; avg: %f\r\n", stats->c, new, stats->average);
-	} else {
-		int n;
 
-		if (stats->c >= (uint64_t)stats->n) {
-			n = stats->n;
-		} else {
-			n = (int)stats->c;
-		}
-		double oldavg = stats->average;
-		double d = new - stats->last_value;
-	 	/* double newavg = oldavg + (d / n); */
-		// exponential avg https://en.wikipedia.org/wiki/Moving_average
-		double newavg = new + (0.999 * (oldavg - new));
-		stats->average = newavg;
-		/* stats->variance += d * ( new - newavg + stats->last_value - oldavg) / (n - 1); */
-		/* stats->stddev = sqrt(stats->variance); */
-		//printf("stats: c: %"PRIu64"; n: %d; old avg: %f; avg: %f\r\n", stats->c, stats->n, oldavg, stats->average);
+	// collect a good first sample
+	if (stats->i < INITIAL_SAMPLE_SIZE) {
+		stats->initial[stats->i++] = new;
+		stats->average    = initial_average(stats);
+		stats->last_value = new;
+		return;
 	}
+	//printf("update: %f\r\n", new);
 
+	double oldavg = stats->average;
+	// exponential avg https://en.wikipedia.org/wiki/Moving_average
+	double newavg = (ALPHA * new) + (1.0 - ALPHA) * oldavg;
+	stats->average = newavg;
 
 	++stats->c;
 	stats->last_value = new;
