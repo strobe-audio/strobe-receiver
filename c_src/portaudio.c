@@ -236,13 +236,25 @@ void send_packet(audio_callback_context *context,
 			resample_ratio = 0.998;
 		}
 	}
+
+	/* src_set_ratio(context->resampler, resample_ratio); */
+	frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
+
+	if (frames == 0) {
+		int error = src_error(context->resampler);
+		if (error != 0) {
+			printf("SRC ERROR: %d '%s'\r\n", error, src_strerror(error));
 		}
 	}
-	src_set_ratio(context->resampler, resample_ratio);
-	frames = src_callback_read(context->resampler, resample_ratio, frameCount, out);
+
+	context->active_packet->played += (frames * CHANNEL_COUNT);
 
 	if (frames < frameCount) {
 		printf("ERROR: short frames %lu\r\n", frameCount - frames);
+		// this reset seems to avoid issues when stopping a stream
+		// without it the resampler would occasionally get into some kind
+		// of internal infernal loop...
+		playback_stopped(context);
 	}
 
 
