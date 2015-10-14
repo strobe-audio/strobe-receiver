@@ -86,9 +86,6 @@ typedef struct audio_callback_context {
 
 	bool                playing;
 
-	UT_ringbuffer        *playback_samples;
-
-	stream_statistics_t  *playback_ratio_stats;
 	stream_statistics_t  *timestamp_offset_stats;
 
 	SRC_STATE            *resampler;
@@ -162,10 +159,10 @@ static long src_input_callback(void *cb_data, float **data) {
 		audio_callback_context *context = (audio_callback_context*)cb_data;
 		long sent = 0;
 		while (sent < OUTPUT_BUFFER_SIZE && context_has_data(context)) {
-			/* printf("getting data %lu\r\n", sent); */
 			sent += copy_packet_with_offset(context, context->buffer, OUTPUT_BUFFER_SIZE, sent);
 		}
-		*data = &(context->buffer[0]);
+		*data = context->buffer;
+
 		return sent / CHANNEL_COUNT;
 }
 
@@ -194,51 +191,20 @@ int64_t packet_output_offset_absolute_time(
 }
 
 
-unsigned long send_packet_with_offset(audio_callback_context *context,
-		float *out,
-		unsigned long requestedLen,
-		unsigned long outOffset)
-{
-	timestamped_packet *packet = context->active_packet;
-
-	unsigned long len = requestedLen;
-	uint16_t offset = 0;
-
-	if ((packet->offset + len) <= packet->len) {
-		offset = packet->offset + len;
-	} else {
-		len = packet->len - packet->offset;
-		offset = packet->len;
-	}
-	// printf("\rsending packet %lu/%lu [ %u -> %u/%u ] [%f, %f]\r\n", len, requestedLen, packet->offset, offset, packet->len, *(packet->data + packet->offset), *(packet->data + packet->offset + 1));
-
-	memcpy((out + outOffset), (float *)(packet->data + packet->offset), len * context->sample_size);
-
-	packet->offset = offset;
-
-	return len;
-}
-
 void send_packet(audio_callback_context *context,
 		float *out,
 		unsigned long frameCount,
 		const PaStreamCallbackTimeInfo*   timeInfo
 		)
 {
-	timestamped_packet *packet;
-	unsigned long sent = 0;
-	unsigned long requestedLen = frameCount * CHANNEL_COUNT;
-
-
 
 	uint64_t now = monotonic_microseconds();
 	uint64_t output_time;
 	uint64_t packet_time;
 
 	if (context->playing == false) {
-		packet      = context->active_packet;
 		output_time = stream_time_to_absolute_time(context, now, timeInfo);
-		packet_time = packet_output_absolute_time(packet);
+		packet_time = packet_output_absolute_time(context->active_packet);
 		// we want to wait for the right time to start playing the packet
 		if (packet_time > output_time) {
 			// not our time... wait
@@ -251,19 +217,16 @@ void send_packet(audio_callback_context *context,
 		context->playing = true;
 	}
 
-	long frames;
-	packet = context->active_packet;
+	unsigned long frames;
 	double resample_ratio = 1.0;
-	const int max_frame_delta = 1;
 
-	int64_t packet_offset = packet_output_offset_absolute_time(now, packet);
+
+	int64_t packet_offset = packet_output_offset_absolute_time(now, context->active_packet);
 
 	stream_stats_update(context->timestamp_offset_stats, packet_offset);
 
 	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
-		int resample_to_frames = frameCount;
 		double timestamp_offset = (double)context->timestamp_offset_stats->average;
-		double abs_timestamp_offset = fabs(timestamp_offset);
 
 		if (true && abs_timestamp_offset >= 250) {
 			if (timestamp_offset > 0) {
@@ -445,22 +408,17 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 		goto error;
 	}
 
-	utringbuffer_new(context->playback_samples, STREAM_SAMPLE_SIZE, &stream_sample_icd);
-
-	context->playback_ratio_stats = driver_alloc(sizeof(stream_statistics_t));
 	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
 
-
-	stream_stats_init(context->playback_ratio_stats, STREAM_STATS_WINDOW_SIZE);
 	stream_stats_init(context->timestamp_offset_stats, STREAM_STATS_WINDOW_SIZE);
 
-	context->active_packet->timestamp      = 0;
-	context->active_packet->len            = 0;
-	context->active_packet->offset         = 0;
+	context->active_packet->timestamp = 0;
+	context->active_packet->len       = 0;
+	context->active_packet->offset    = 0;
 
 	// initialize stats on context
-	context->callback_count                = (uint64_t)0;
-	context->playing                       = false;
+	context->callback_count           = (uint64_t)0;
+	context->playing                  = false;
 
 	PaUtil_InitializeRingBuffer(&context->audio_buffer, sizeof(timestamped_packet), BUFFER_SIZE, context->audio_buffer_data);
 
@@ -513,9 +471,7 @@ static void portaudio_drv_stop(ErlDrvData drv_data) {
 	printf("\rDRV: free\r\n");
 
 	src_delete(context->resampler);
-	utringbuffer_free(context->playback_samples);
 
-	driver_free((char*)context->playback_ratio_stats);
 	driver_free((char*)context->timestamp_offset_stats);
 	driver_free((char*)context->audio_buffer_data);
 	driver_free((char*)context->active_packet);
