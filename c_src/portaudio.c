@@ -42,7 +42,7 @@
 #define BUFFER_SIZE   (16)
 #define SAMPLE_RATE   (44100.0)
 #define CHANNEL_COUNT (2)
-#define OUTPUT_BUFFER_SIZE (64 * CHANNEL_COUNT)
+#define OUTPUT_BUFFER_SIZE (128 * CHANNEL_COUNT)
 
 #define SECONDS_PER_FRAME  (1.0 / SAMPLE_RATE)
 #define USECONDS_PER_FRAME (USECONDS / SAMPLE_RATE)
@@ -152,6 +152,7 @@ static long src_input_callback(void *cb_data, float **data) {
 		audio_callback_context *context = (audio_callback_context*)cb_data;
 		long sent = 0;
 		while (sent < OUTPUT_BUFFER_SIZE && context_has_data(context)) {
+			/* printf("getting data %lu\r\n", sent); */
 			sent += copy_packet_with_offset(context, context->buffer, OUTPUT_BUFFER_SIZE, sent);
 		}
 		*data = &(context->buffer[0]);
@@ -241,148 +242,46 @@ void send_packet(audio_callback_context *context,
 	}
 
 	long frames;
+	packet = context->active_packet;
+	double resample_ratio = 1.0;
+	const int max_frame_delta = 1;
 
-	frames = src_callback_read(context->resampler, 1.0, frameCount, out);
-
-	/* packet      = context->active_packet; */
-	/* int64_t packet_offset = packet_output_offset_absolute_time(now, packet); */
+	int64_t packet_offset = packet_output_offset_absolute_time(now, packet);
 	/* stream_sample_t sample  = { .t = now, .o = packet_offset }; */
-	/* #<{(| printf("sample %"PRIu64" %"PRIi64"\r\n", sample.t, sample.o); |)}># */
-	/* utringbuffer_push_back(context->playback_samples, &sample); */
-	/* stream_stats_update(context->timestamp_offset_stats, packet_offset); */
-  /*  */
-	/* double resample_ratio = 1.0; */
-  /*  */
-	/* const int max_frame_delta = 1; */
-	/* int max_frames = (int)frameCount + max_frame_delta; */
-	/* float original[max_frames * CHANNEL_COUNT]; */
-	/* float resampled[requestedLen]; */
-	/* int resample_to_frames = frameCount; */
-  /*  */
-	/* if (utringbuffer_len(context->playback_samples) >= STREAM_SAMPLE_SIZE) { */
-	/* 	double timestamp_offset = (double)context->timestamp_offset_stats->average; */
-	/* 	double abs_timestamp_offset = fabs(timestamp_offset); */
-	/* 	// */
-	/* 	// need to decide the max speed up/slow down we will allow - it might be */
-	/* 	// greater than I think... */
-	/* 	//requestedLen */
-  /*  */
-	/* 	uint64_t offset_frames = abs_timestamp_offset * FRAMES_PER_USECONDS; */
-  /*  */
-	/* 	if (offset_frames > 0) { */
-	/* 		offset_frames = MIN(offset_frames, max_frame_delta); */
-	/* 	} */
-  /*  */
-	/* 	if (true && abs_timestamp_offset >= 500) { */
-	/* 		if (timestamp_offset > 0) { */
-	/* 			// if this is +ve the playback needs to be slowed down by making fewer audio samples */
-	/* 			// take more time until the actual time has caught up with the stream time */
-	/* 			resample_to_frames = (frameCount - offset_frames); */
-  /*  */
-  /*  */
-	/* 		} else { */
-	/* 			// if it's -ve then the stream is behind & we need to eat some samples up */
-	/* 			// in order to sync the times. we eat up samples by making each packet frame take */
-	/* 			// less real time by resampling to a higher freq. */
-	/* 			// 1. work out how many frames we are out by */
-	/* 			// 2. if this is <= our max allowed number of frames then */
-	/* 			//    resample this increased number of frames to the requested number of frames */
-	/* 			// 3. If this is > our max allowed number of frames then resample */
-	/* 			//    to the max number of frames */
-  /*  */
-	/* 			resample_to_frames = (frameCount + offset_frames); */
-  /*  */
-	/* 		} */
-	/* 		if (resample_to_frames != (int)frameCount) { */
-	/* 			requestedLen = resample_to_frames * CHANNEL_COUNT; */
-	/* 			resample_ratio = (double)resample_to_frames / (double)frameCount; */
-	/* 			#<{(| printf("%f need %"PRIu64"/%d %lu %d %f\r\n", timestamp_offset, offset_frames, max_frames, frameCount, resample_to_frames, resample_ratio); |)}># */
-	/* 		} */
-	/* 	} */
-	/* } */
-  /*  */
-	/* unsigned long remaining = requestedLen; */
-	/* sent = 0; */
-  /*  */
-	/* if (context->unused_samples_available > 0) { */
-	/* 	printf("using leftovers %lu\r\n", context->unused_samples_available); */
-	/* 	sent = context->unused_samples_available; */
-	/* 	remaining -= sent; */
-	/* 	printf("memcpy\r\n"); */
-	/* 	memcpy(original, context->unused_samples, sent * context->sample_size); */
-	/* 	printf("memcpy done\r\n"); */
-	/* 	// reset the unused frames */
-	/* 	context->unused_samples_available = 0; */
-	/* } */
-  /*  */
-	/* sent += send_packet_with_offset(context, original, remaining, sent); */
-  /*  */
-	/* if (sent < requestedLen) { */
-	/* 	remaining -= sent; */
-	/* 	if (load_next_packet(context)) { */
-	/* 		sent += send_packet_with_offset(context, original, remaining, sent); */
-	/* 	} */
-	/* } */
-  /*  */
-	/* SRC_DATA data = { */
-	/* 	.data_in = original, */
-	/* 	.input_frames = resample_to_frames, */
-	/* 	.data_out = resampled, */
-	/* 	.output_frames = frameCount, */
-	/* 	.src_ratio = resample_ratio, */
-	/* 	.end_of_input = 0 */
-	/* }; */
-	/* #<{(| src_set_ratio(context->resampler, resample_ratio); |)}># */
-	/* int src_error = src_process(context->resampler, &data); */
-	/* if (src_error != 0) { */
-	/* 	printf("got error from resampling %s\r\n", src_strerror(src_error)); */
-	/* } */
-	/* if (data.output_frames_gen < frameCount) { */
-	/* 	#<{(| printf("ERROR %lu  %lu\r\n", data.output_frames_gen, frameCount); |)}># */
-	/* } */
-	/* if (data.input_frames_used < resample_to_frames) { */
-	/* 	// need to push the unused samples back into the buffer somehow */
-	/* 	// this is easy if we're in the middle of a packet, */
-	/* 	// but hard if we're at the end. */
-	/* 	printf("leftover %lu/%lu = %lu\r\n", data.input_frames_used, resample_to_frames, context->unused_samples_available); */
-	/* 	long used_samples = (data.input_frames_used * CHANNEL_COUNT); */
-	/* 	long unused_samples = ((resample_to_frames - data.input_frames_used) * CHANNEL_COUNT); */
-	/* 	context->unused_samples_available = unused_samples; */
-	/* 	memcpy(context->unused_samples, original + used_samples, unused_samples * context->sample_size); */
-	/* } */
-	/* memcpy(out, resampled, frameCount * CHANNEL_COUNT * context->sample_size); */
-	/* } else { */
-	/* 	memcpy(out, original, len * context->sample_size); */
-	/* } */
+	stream_stats_update(context->timestamp_offset_stats, packet_offset);
 
-	/* 	} else { */
-	/* 		len = send_packet_with_offset(context, out, requestedLen, 0); */
-	/*  */
-	/* 		if (len < requestedLen) { */
-	/* 			// i've obviously used up the active_packet so it's safe to just load the next one */
-	/* 			remaining = requestedLen - len; */
-	/* 			if (load_next_packet(context)) { */
-	/* 				len = send_packet_with_offset(context, out, remaining, len); */
-	/* 			} else { */
-	/* #ifndef CLEAR_OUTPUT_EVERY_FRAME */
-	/* 				memset(out+len, 0, remaining * context->sample_size); */
-	/* #endif */
-	/* 			} */
-	/* 		} */
-	/* 	} */
+	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
+		int resample_to_frames = frameCount;
+		double timestamp_offset = (double)context->timestamp_offset_stats->average;
+		double abs_timestamp_offset = fabs(timestamp_offset);
+		uint64_t offset_frames = abs_timestamp_offset * FRAMES_PER_USECONDS;
 
-	////////////////////////////////
+		if (offset_frames > 0) {
+			offset_frames = MIN(offset_frames, max_frame_delta);
+		}
+		if (true && abs_timestamp_offset >= 500) {
+			if (timestamp_offset > 0) {
+				resample_to_frames = (frameCount + offset_frames);
+			} else {
+				resample_to_frames = (frameCount - offset_frames);
+			}
+		}
+		if (resample_to_frames != (int)frameCount) {
+			resample_ratio = (double)resample_to_frames / (double)frameCount;
+			printf("resampling ratio %f\r\n", resample_ratio);
+		}
+	}
+	src_set_ratio(context->resampler, resample_ratio);
+	frames = src_callback_read(context->resampler, resample_ratio, frameCount, out);
+
+	if (frames < frameCount) {
+		printf("ERROR: short frames %lu\r\n", frameCount - frames);
+	}
 
 
-
-	/* if ((context->callback_count % 400) == 0) { */
-	/* 	#<{(| packet      = context->active_packet; |)}># */
-	/* 	#<{(| packet_time = packet_output_absolute_time(packet); |)}># */
-	/* 	#<{(| int64_t packet_offset = packet_output_offset_absolute_time(now, packet); |)}># */
-  /*  */
-	/* 	printf ("ratio: %lf++%lf; timestamp_delta: %lf++%lf / %"PRIi64"\r\n", context->playback_ratio_stats->average, context->playback_ratio_stats->stddev, context->timestamp_offset_stats->average, context->timestamp_offset_stats->stddev, packet_offset); */
-	/* 	#<{(| printf("1: packet offset: %"PRIi64" stream: [%f / %f = %f]\r\n", packet_offset, timeInfo->currentTime, timeInfo->outputBufferDacTime,  timeInfo->outputBufferDacTime - timeInfo->currentTime); |)}># */
-	/* } */
+	if ((context->callback_count % 400) == 0) {
+		printf ("timestamp_delta: %lf++%lf / %"PRIi64"\r\n", context->timestamp_offset_stats->average, context->timestamp_offset_stats->stddev, packet_offset);
+	}
 
 }
 
