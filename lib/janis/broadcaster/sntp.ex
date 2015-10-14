@@ -20,6 +20,18 @@ defmodule Janis.Broadcaster.SNTP do
     GenServer.call(@name, :measure_sync)
   end
 
+  def time_delta do
+    case measure_sync do
+      {:ok, {start, receipt, reply, finish}} ->
+        latency = (finish - start) / 2
+        # https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
+        delta = round(((receipt - start) + (reply - finish)) / 2)
+        {:ok, latency, delta}
+      {:error, _reason} = err ->
+        err
+    end
+  end
+
   def handle_call(:measure_sync, _from, state) do
     ntp_measure(state)
   end

@@ -5,7 +5,7 @@ defmodule Janis.Broadcaster.Monitor do
 
   defmodule S do
     defstruct broadcaster: nil,
-              delta: 0,
+              delta: nil,
               latency: 0,
               measurement_count: 0,
               packet_count: 0,
@@ -31,6 +31,11 @@ defmodule Janis.Broadcaster.Monitor do
     {:ok, collect_measurements(%S{broadcaster: broadcaster})}
   end
 
+  def handle_info({:start_collection, interval, sample_size}, %{broadcaster: broadcaster} = state) do
+    Collector.start_link(self, broadcaster, interval, sample_size)
+    {:noreply, state}
+  end
+
   def terminate(reason, state) do
     Logger.info "Stopping Broadcaster.Monitor"
     Janis.Player.stop_player
@@ -38,14 +43,12 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   defp collect_measurements(%S{measurement_count: count, broadcaster: broadcaster} = state) do
-    {interval, sample_size} = case count do
-      # _ when count == 0  -> { 100, 31}
-      _ when count == 0  -> { 100, 11} # debugging value -- saves me a bit of waiting
-      _ when count  < 10 -> { 100, 11}
-      _ when count >= 20 -> {1000, 11}
-      _ when count >= 10 -> { 500, 11}
+    {interval, sample_size, delay} = case count do
+      _ when count  < 10 -> { 50, 11, 0}
+      _ when count >= 20 -> { 80, 21, 4000}
+      _ when count >= 10 -> { 80, 21, 1000}
     end
-    Collector.start_link(self, broadcaster, interval, sample_size)
+    :timer.send_after(delay, self, {:start_collection, interval, sample_size})
     state
   end
 
@@ -72,21 +75,36 @@ defmodule Janis.Broadcaster.Monitor do
     {:noreply, append_measurement(measurement, state)}
   end
 
-  def append_measurement({mlatency, mdelta} = _measurement, %S{measurement_count: measurement_count, latency: latency, delta: delta} = state) do
-    # calculate new delta & latency using Cumulative moving average, see:
-    # https://en.wikipedia.org/wiki/Moving_average
-    new_count = measurement_count + 1
-    max_latency = case mlatency do
-      _ when mlatency > latency -> mlatency
-      _ -> latency
-    end
-    avg_delta = round (((measurement_count * delta) + mdelta) / new_count)
-    state = %S{ state | measurement_count: new_count, latency: max_latency, delta: avg_delta }
-    Logger.info "New time delta measurement #{delta} -> #{avg_delta} (#{avg_delta - delta})"
-    {:ok, c_time, e_time} = Janis.Audio.time
-    # Logger.info("C time: #{c_time}; E time: #{e_time} delta: #{c_time - e_time}")
+  def append_measurement({new_latency, new_delta} = _measurement, %S{measurement_count: measurement_count, latency: latency, delta: delta} = state) do
+    state = append_latency_measurement(new_latency, state)
+    state = append_delta_measurement(new_delta, state)
+
+    state = %S{ state | measurement_count: measurement_count + 1 }
     collect_measurements(state)
     state
+  end
+
+  defp append_latency_measurement(new_latency, %S{ latency: latency } = state) do
+    max_latency = case new_latency do
+      _ when new_latency > latency -> new_latency
+      _ -> latency
+    end
+    %S{ state | latency: max_latency }
+  end
+
+  defp append_delta_measurement(new_delta, %S{ delta: nil} = state) do
+    %S{ state | delta: new_delta }
+  end
+
+  defp append_delta_measurement(new_delta, %S{ delta: delta} = state) do
+	 	# /* double newavg = oldavg + (d / n); */
+		# double newavg = new + (0.999 * (oldavg - new));
+    # avg_delta = round (((measurement_count * delta) + new_delta) / new_count)
+    # avg_delta = (delta  + (new_delta - delta) / 20) |> round
+    avg_delta = (new_delta + (0.9 * (delta - new_delta))) |> round
+    # avg_delta = (delta  + (new_delta - delta) / 20) |> round
+    Logger.info "New time delta measurement #{delta}/#{new_delta} #{delta} -> #{avg_delta} (#{avg_delta - delta})"
+    %S{ state | delta: avg_delta }
   end
 
   defmodule Collector do
@@ -114,10 +132,7 @@ defmodule Janis.Broadcaster.Monitor do
 
     defp measure_sync(%{measurements: measurements, count: count, broadcaster: broadcaster} = state) when count > 0  do
       case sync_exchange(broadcaster) do
-        {:ok, {start, receipt, reply, finish}} ->
-          latency = (finish - start) / 2
-          # https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
-          delta = round(((receipt - start) + (reply - finish)) / 2)
+        {:ok, latency, delta} ->
           %{ state | count: count - 1,  measurements: [{latency, delta} | measurements]}
         {:error, _reason} = err ->
           Logger.warn "Error measuring time sync #{inspect err}"
@@ -128,12 +143,11 @@ defmodule Janis.Broadcaster.Monitor do
     # http://www.mine-control.com/zack/timesync/timesync.html
     defp calculate_sync(%{measurements: measurements} = _state) do
       sorted_measurements = Enum.sort_by measurements, fn({latency, _delta}) -> latency end
-      {:ok, median} = Enum.fetch sorted_measurements, round(Float.floor(length(measurements)/2))
-      {median_latency, _} = median
+      {:ok, {median_latency, _}} = Enum.fetch sorted_measurements, round(Float.floor(length(measurements)/2))
       std_deviation = std_deviation(sorted_measurements, median_latency)
       discard_limit = median_latency + std_deviation
       valid_measurements = Enum.reject sorted_measurements, fn({latency, _delta}) -> latency > discard_limit end
-      { max_latency, _delta } = Enum.max_by measurements, fn({latency, _delta}) -> latency end
+      { max_latency, _delta } = Enum.max_by valid_measurements, fn({latency, _delta}) -> latency end
       average_delta = Enum.reduce(valid_measurements, 0, fn({_latency, delta}, acc) -> acc + delta end) / length(valid_measurements)
       { round(max_latency), round(average_delta) }
     end
@@ -146,7 +160,7 @@ defmodule Janis.Broadcaster.Monitor do
     end
 
     defp sync_exchange(broadcaster) do
-      Janis.Broadcaster.SNTP.measure_sync
+      Janis.Broadcaster.SNTP.time_delta
     end
 
     def terminate(reason, state) do
