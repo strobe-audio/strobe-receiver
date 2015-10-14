@@ -247,28 +247,20 @@ void send_packet(audio_callback_context *context,
 	const int max_frame_delta = 1;
 
 	int64_t packet_offset = packet_output_offset_absolute_time(now, packet);
-	/* stream_sample_t sample  = { .t = now, .o = packet_offset }; */
+
 	stream_stats_update(context->timestamp_offset_stats, packet_offset);
 
 	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
 		int resample_to_frames = frameCount;
 		double timestamp_offset = (double)context->timestamp_offset_stats->average;
 		double abs_timestamp_offset = fabs(timestamp_offset);
-		uint64_t offset_frames = abs_timestamp_offset * FRAMES_PER_USECONDS;
 
-		if (offset_frames > 0) {
-			offset_frames = MIN(offset_frames, max_frame_delta);
-		}
-		if (true && abs_timestamp_offset >= 500) {
+		if (true && abs_timestamp_offset >= 250) {
 			if (timestamp_offset > 0) {
-				resample_to_frames = (frameCount + offset_frames);
+				resample_ratio = 1.002;
 			} else {
-				resample_to_frames = (frameCount - offset_frames);
+				resample_ratio = 0.998;
 			}
-		}
-		if (resample_to_frames != (int)frameCount) {
-			resample_ratio = (double)resample_to_frames / (double)frameCount;
-			printf("resampling ratio %f\r\n", resample_ratio);
 		}
 	}
 	src_set_ratio(context->resampler, resample_ratio);
@@ -280,6 +272,7 @@ void send_packet(audio_callback_context *context,
 
 
 	if ((context->callback_count % 400) == 0) {
+
 		printf ("timestamp_delta: %lf++%lf / %"PRIi64"\r\n", context->timestamp_offset_stats->average, context->timestamp_offset_stats->stddev, packet_offset);
 	}
 
