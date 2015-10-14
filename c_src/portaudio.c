@@ -217,6 +217,7 @@ void send_packet(audio_callback_context *context,
 		context->playing = true;
 	}
 
+	const int jitter = 250;
 	unsigned long frames;
 	double resample_ratio = 1.0;
 
@@ -228,12 +229,13 @@ void send_packet(audio_callback_context *context,
 	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
 		double timestamp_offset = (double)context->timestamp_offset_stats->average;
 
-		if (true && abs_timestamp_offset >= 250) {
-			if (timestamp_offset > 0) {
-				resample_ratio = 1.002;
-			} else {
-				resample_ratio = 0.998;
-			}
+		if (timestamp_offset >= jitter) {
+			resample_ratio = 1.002;
+		}
+		if (timestamp_offset <= -jitter) {
+			resample_ratio = 0.998;
+		}
+	}
 		}
 	}
 	src_set_ratio(context->resampler, resample_ratio);
