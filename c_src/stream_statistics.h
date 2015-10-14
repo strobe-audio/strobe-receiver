@@ -13,3 +13,4 @@ typedef struct {
 
 void stream_stats_init(stream_statistics_t *stats, int window_size);
 void stream_stats_update(stream_statistics_t *stats, double new);
+void stream_stats_reset(stream_statistics_t *stats);

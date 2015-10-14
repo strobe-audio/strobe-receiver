@@ -103,6 +103,12 @@ typedef struct portaudio_state {
 } portaudio_state;
 
 
+void playback_stopped(audio_callback_context *context) {
+	printf("Playback stopped...\r\n");
+	src_reset(context->resampler);
+	stream_stats_reset(context->timestamp_offset_stats);
+}
+
 bool load_next_packet(audio_callback_context *context)
 {
 	if (PaUtil_GetRingBufferReadAvailable(&context->audio_buffer) > 0) {
@@ -143,6 +149,8 @@ long copy_packet_with_offset(
 
 	if (packet->offset == packet->len) {
 		if (!load_next_packet(context)) {
+			// reset the sampler
+			playback_stopped(context);
 			context->active_packet->len = 0;
 		}
 	}
