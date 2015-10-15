@@ -55,6 +55,7 @@
 #define USECONDS_PER_FLOAT (USECONDS * SECONDS_PER_FLOAT)
 
 #define STREAM_STATS_WINDOW_SIZE 1000
+#define MAX_RESAMPLE_RATIO       0.004
 
 // http://stackoverflow.com/questions/3599160/unused-parameter-warnings-in-c-code
 #define UNUSED(x) (void)(x)
@@ -236,8 +237,8 @@ void send_packet(audio_callback_context *context,
 		if ((smoothed_timestamp_offset < -jitter) || (smoothed_timestamp_offset > jitter)) {
 			double time = ((double)now)/USECONDS;
 			control = pid_control(&context->pid, time, smoothed_timestamp_offset, 0.0);
-			control = MAX(control, -0.002);
-			control = MIN(control, 0.002);
+			control = MAX(control, -MAX_RESAMPLE_RATIO);
+			control = MIN(control, MAX_RESAMPLE_RATIO);
 			resample_ratio = 1.0 - control;
 		}
 
