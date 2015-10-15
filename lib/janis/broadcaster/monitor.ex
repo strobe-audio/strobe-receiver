@@ -6,6 +6,7 @@ defmodule Janis.Broadcaster.Monitor do
   defmodule S do
     defstruct broadcaster: nil,
               delta: nil,
+              delta_delta: 0,
               latency: 0,
               measurement_count: 0,
               packet_count: 0,
@@ -13,6 +14,7 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   @monitor_name Janis.Broadcaster.Monitor
+  @delta_step   2
 
   def time_delta do
     GenServer.call(@monitor_name, :get_delta)
@@ -58,7 +60,8 @@ defmodule Janis.Broadcaster.Monitor do
     {:reply, {:ok, delta}, state}
   end
 
-  def handle_call({:translate_packet, {timestamp, data}}, _from, %S{delta: delta} = state) do
+  def handle_call({:translate_packet, {timestamp, data}}, _from, %S{delta: od} = state) do
+    %S{delta: delta} = state = increment_delta(state)
     translated_timestamp = (timestamp - delta)
     {:reply, {translated_timestamp, data}, state}
   end
@@ -73,6 +76,26 @@ defmodule Janis.Broadcaster.Monitor do
 
   def handle_cast({:append_measurement, measurement}, state) do
     {:noreply, append_measurement(measurement, state)}
+  end
+
+  defp increment_delta(%S{delta_delta: 0} = state) do
+    state
+  end
+
+  defp increment_delta(%S{delta_delta: dd, delta: delta} = state) when dd < 0 do
+    step = case abs(dd) do
+      a when a < @delta_step -> a
+      _  -> @delta_step
+    end
+    %S{ state | delta_delta: dd + step, delta: delta - step }
+  end
+
+  defp increment_delta(%S{delta_delta: dd, delta: delta} = state) when dd > 0 do
+    step = case abs(dd) do
+      a when a < @delta_step -> a
+      _  -> @delta_step
+    end
+    %S{ state | delta_delta: dd - step, delta: delta + step }
   end
 
   def append_measurement({new_latency, new_delta} = _measurement, %S{measurement_count: measurement_count, latency: latency, delta: delta} = state) do
@@ -96,15 +119,11 @@ defmodule Janis.Broadcaster.Monitor do
     %S{ state | delta: new_delta }
   end
 
-  defp append_delta_measurement(new_delta, %S{ delta: delta} = state) do
-	 	# /* double newavg = oldavg + (d / n); */
-		# double newavg = new + (0.999 * (oldavg - new));
-    # avg_delta = round (((measurement_count * delta) + new_delta) / new_count)
-    # avg_delta = (delta  + (new_delta - delta) / 20) |> round
+  defp append_delta_measurement(new_delta, %S{ delta: delta, delta_delta: delta_delta } = state) do
     avg_delta = (new_delta + (0.9 * (delta - new_delta))) |> round
-    # avg_delta = (delta  + (new_delta - delta) / 20) |> round
-    Logger.info "New time delta measurement #{delta}/#{new_delta} #{delta} -> #{avg_delta} (#{avg_delta - delta})"
-    %S{ state | delta: avg_delta }
+    dd = avg_delta - delta
+    Logger.info "New time delta measurement #{delta}/#{new_delta} #{delta} -> #{avg_delta} (#{dd})"
+    %S{ state | delta_delta: delta_delta + dd }
   end
 
   defmodule Collector do
