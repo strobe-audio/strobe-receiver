@@ -26,6 +26,7 @@
 #include "monotonic_time.h"
 #include "least_squares.h"
 #include "stream_statistics.h"
+#include "pid.h"
 
 // http://portaudio.com/docs/v19-doxydocs/compile_linux.html
 #ifdef __linux__
@@ -91,6 +92,8 @@ typedef struct audio_callback_context {
 	SRC_STATE            *resampler;
 
 	float                buffer[OUTPUT_BUFFER_SIZE];
+
+	pid_state_t          pid;
 
 } audio_callback_context;
 
@@ -217,7 +220,7 @@ void send_packet(audio_callback_context *context,
 		context->playing = true;
 	}
 
-	const int jitter = 250;
+	const int jitter = 0;
 	unsigned long frames;
 	double resample_ratio = 1.0;
 
@@ -226,15 +229,24 @@ void send_packet(audio_callback_context *context,
 
 	stream_stats_update(context->timestamp_offset_stats, packet_offset);
 
-	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
-		double timestamp_offset = (double)context->timestamp_offset_stats->average;
+	double control = 0.0;
+	double smoothed_timestamp_offset = (double)context->timestamp_offset_stats->average;
 
-		if (timestamp_offset >= jitter) {
-			resample_ratio = 1.002;
+	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
+		if ((smoothed_timestamp_offset < -jitter) || (smoothed_timestamp_offset > jitter)) {
+			double time = ((double)now)/USECONDS;
+			control = pid_control(&context->pid, time, smoothed_timestamp_offset, 0.0);
+			control = MAX(control, -0.002);
+			control = MIN(control, 0.002);
+			resample_ratio = 1.0 - control;
 		}
-		if (timestamp_offset <= -jitter) {
-			resample_ratio = 0.998;
-		}
+
+		/* if (smoothed_timestamp_offset >= jitter) { */
+		/* 	resample_ratio = 1.0 + control; */
+		/* } */
+		/* if (smoothed_timestamp_offset <= -jitter) { */
+		/* 	resample_ratio = 0.998; */
+		/* } */
 	}
 
 	/* src_set_ratio(context->resampler, resample_ratio); */
@@ -260,7 +272,7 @@ void send_packet(audio_callback_context *context,
 
 	if ((context->callback_count % 400) == 0) {
 
-		printf ("timestamp_delta: %lf++%lf / %"PRIi64"\r\n", context->timestamp_offset_stats->average, context->timestamp_offset_stats->stddev, packet_offset);
+		printf ("% 7.2f,% 6"PRIi64",% 5.4f,% 7.5f\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, control*1);
 	}
 
 }
@@ -423,6 +435,8 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 	}
 
 	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
+
+	pid_init(&context->pid, 9.0, 0.0, 0.2);
 
 	stream_stats_init(context->timestamp_offset_stats, STREAM_STATS_WINDOW_SIZE);
 

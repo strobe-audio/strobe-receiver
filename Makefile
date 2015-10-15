@@ -26,7 +26,7 @@ AUDIO_LIBS    = -L/usr/local/lib -lportaudio -lsamplerate
 STD_LIBS      = -lm
 
 HEADER_FILES = c_src
-SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c c_src/monotonic_time.c c_src/least_squares.c c_src/stream_statistics.c
+SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c c_src/monotonic_time.c c_src/least_squares.c c_src/stream_statistics.c c_src/pid.c
 
 OBJECT_FILES = $(SOURCE_FILES:.c=.o)
 

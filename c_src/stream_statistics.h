@@ -1,7 +1,7 @@
 #include <inttypes.h>
 #include <math.h>
 
-#define INITIAL_SAMPLE_SIZE (10)
+#define INITIAL_SAMPLE_SIZE (1000)
 
 typedef struct {
 	uint64_t  c; //number of samples taken

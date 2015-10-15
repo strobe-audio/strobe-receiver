@@ -7,7 +7,8 @@
 // is something of a misnomer, as larger values of α actually reduce the level of
 // smoothing, and in the limiting case with α = 1 the output series is just the
 // same as the original series
-#define ALPHA (0.0001)
+#define BEST_ALPHA (0.0001)
+#define ALPHA 0.001
 
 // taken from:
 // http://jonisalonen.com/2014/efficient-and-accurate-rolling-standard-deviation/
