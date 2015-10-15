@@ -16,16 +16,32 @@ Dependencies
 
 - elixir 1.x
 
+- `avahi`, `dnssd`
+    sudo apt-get install -y avahi-daemon libavahi-compat-libdnssd-dev
 - `portaudio`
      sudo apt-get install -y portaudio19-dev
 
 - `libsamplerate`:
-     sudo apt-get install -y libsamplerate0 libsamplerate0-dev
+
+     sudo bash -c 'echo /usr/local/lib >> /etc/ld.so.conf'
+     git clone https://github.com/erikd/libsamplerate.git
+     cd libsamplerate
+     ./autogen.sh --prefix=/usr
+     make
+     sudo make install
+
+     # sudo apt-get install -y libsamplerate0 libsamplerate0-dev
 
 TODO
 ----
 
 - Improve OS X monotonic time function. e.g. using https://github.com/ChisholmKyle/PosixMachTiming/blob/master/src/timing_test.c
+- Look at improved packet offset smoothing behaviour. Need something that filters out the very small scale fluctuations but doesn't lag too far behind the 'actual' value -- impossible?
+  - http://www.edaboard.com/thread160059.html
+- Ramped time diff to improve behaviour of PID control
+- Look at Ziegler–Nichols method for tuning the PID factors
+  - https://en.m.wikipedia.org/wiki/PID_controller
+  - https://controls.engin.umich.edu/wiki/index.php/PIDTuningClassical
 
 Calculate re-sampling needed
 ----------------------------
