@@ -35,6 +35,7 @@ Dependencies
 TODO
 ----
 
+- The buffer's view of the time delta will fall way out of sync if the player is paused -- buffer needs to know if it's paused so it can stop smearing the delta changes...
 - Improve OS X monotonic time function. e.g. using https://github.com/ChisholmKyle/PosixMachTiming/blob/master/src/timing_test.c
 - Look at improved packet offset smoothing behaviour. Need something that filters out the very small scale fluctuations but doesn't lag too far behind the 'actual' value -- impossible?
   - http://www.edaboard.com/thread160059.html

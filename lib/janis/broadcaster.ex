@@ -40,12 +40,7 @@ defmodule Janis.Broadcaster do
   end
 
   def terminate_broadcaster(supervisor, broadcaster) do
-    IO.inspect [:terminate_broadcaster, broadcaster]
     :ok = Supervisor.terminate_child(supervisor, broadcaster)
-  end
-
-  def translate_packet({_timestamp, _data} = packet) do
-    GenServer.call(Janis.Broadcaster.Monitor, {:translate_packet, packet})
   end
 
   def init(:ok) do

@@ -1,16 +1,17 @@
 defmodule Janis.Broadcaster.Monitor do
-  use     GenServer
+  use     Monotonic
   require Logger
   alias   Janis.Broadcaster.Monitor.Collector
 
   defmodule S do
     defstruct broadcaster: nil,
               delta: nil,
-              delta_delta: 0,
               latency: 0,
               measurement_count: 0,
               packet_count: 0,
-              player: nil
+              player: nil,
+              delta_listeners: [],
+              next_measurement_time: nil
   end
 
   @monitor_name Janis.Broadcaster.Monitor
@@ -18,6 +19,14 @@ defmodule Janis.Broadcaster.Monitor do
 
   def time_delta do
     GenServer.call(@monitor_name, :get_delta)
+  end
+
+  def add_time_delta_listener(listener) do
+    GenServer.cast(@monitor_name, {:add_time_delta_listener, listener})
+  end
+
+  def remove_time_delta_listener(listener) do
+    GenServer.cast(@monitor_name, {:remove_time_delta_listener, listener})
   end
 
   ### GenServer API
@@ -51,7 +60,7 @@ defmodule Janis.Broadcaster.Monitor do
       _ when count >= 10 -> { 80, 21, 1000}
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
-    state
+    %S{ state | next_measurement_time: monotonic_milliseconds + delay + (sample_size * interval) }
   end
 
   ########################################################
@@ -60,10 +69,15 @@ defmodule Janis.Broadcaster.Monitor do
     {:reply, {:ok, delta}, state}
   end
 
-  def handle_call({:translate_packet, {timestamp, data}}, _from, %S{delta: od} = state) do
-    %S{delta: delta} = state = increment_delta(state)
-    translated_timestamp = (timestamp - delta)
-    {:reply, {translated_timestamp, data}, state}
+  def handle_cast({:add_time_delta_listener, listener}, %S{delta_listeners: listeners, delta: delta} = state) do
+
+    GenServer.cast(listener, {:init_time_delta, delta})
+    {:noreply, %S{ state | delta_listeners: [ listener | listeners ] }}
+  end
+
+  def handle_cast({:remove_time_delta_listener, listener}, %S{delta_listeners: listeners} = state) do
+    listeners = Enum.reject listeners, &(&1 == listener)
+    {:noreply, %S{ state | delta_listeners: listeners }}
   end
 
   def handle_cast({:append_measurement, measurement}, %S{measurement_count: 0} = state) do
@@ -78,33 +92,29 @@ defmodule Janis.Broadcaster.Monitor do
     {:noreply, append_measurement(measurement, state)}
   end
 
-  defp increment_delta(%S{delta_delta: 0} = state) do
-    state
-  end
-
-  defp increment_delta(%S{delta_delta: dd, delta: delta} = state) when dd < 0 do
-    step = case abs(dd) do
-      a when a < @delta_step -> a
-      _  -> @delta_step
-    end
-    %S{ state | delta_delta: dd + step, delta: delta - step }
-  end
-
-  defp increment_delta(%S{delta_delta: dd, delta: delta} = state) when dd > 0 do
-    step = case abs(dd) do
-      a when a < @delta_step -> a
-      _  -> @delta_step
-    end
-    %S{ state | delta_delta: dd - step, delta: delta + step }
-  end
-
   def append_measurement({new_latency, new_delta} = _measurement, %S{measurement_count: measurement_count, latency: latency, delta: delta} = state) do
     state = append_latency_measurement(new_latency, state)
     state = append_delta_measurement(new_delta, state)
 
     state = %S{ state | measurement_count: measurement_count + 1 }
-    collect_measurements(state)
+    state = collect_measurements(state)
+    notify_delta_change(delta, state)
     state
+  end
+
+  defp notify_delta_change(old_delta, %S{delta: new_delta, next_measurement_time: t, delta_listeners: listeners }) do
+    if old_delta != new_delta do
+      Logger.debug "Notifying time delta change..."
+      notify_delta_change(new_delta, t, listeners)
+    end
+  end
+
+  defp notify_delta_change(_delta, _next_measurement_time, []) do
+  end
+
+  defp notify_delta_change(delta, next_measurement_time, [listener | listeners]) do
+    GenServer.cast(listener, {:time_delta_change, delta, next_measurement_time})
+    notify_delta_change(delta, next_measurement_time, listeners)
   end
 
   defp append_latency_measurement(new_latency, %S{ latency: latency } = state) do
@@ -115,15 +125,15 @@ defmodule Janis.Broadcaster.Monitor do
     %S{ state | latency: max_latency }
   end
 
-  defp append_delta_measurement(new_delta, %S{ delta: nil} = state) do
+  defp append_delta_measurement(new_delta, %S{delta: nil} = state) do
     %S{ state | delta: new_delta }
   end
 
-  defp append_delta_measurement(new_delta, %S{ delta: delta, delta_delta: delta_delta } = state) do
+  defp append_delta_measurement(new_delta, %S{ delta: delta } = state) do
     avg_delta = (new_delta + (0.9 * (delta - new_delta))) |> round
     dd = avg_delta - delta
     Logger.info "New time delta measurement #{delta}/#{new_delta} #{delta} -> #{avg_delta} (#{dd})"
-    %S{ state | delta_delta: delta_delta + dd }
+    %S{ state | delta: avg_delta }
   end
 
   defmodule Collector do

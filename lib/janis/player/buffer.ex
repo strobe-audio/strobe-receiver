@@ -7,11 +7,43 @@ defmodule Janis.Player.Buffer do
   Receives data from the buffer and passes it onto the playback process on demand
   """
 
+  defmodule Delta do
+    @moduledoc "Smear changes to time delta into the smallest increment possible"
+
+    require Monotonic
+
+    def new(current_delta) do
+      %{current: current_delta, pending: 0, d: 0, time: 0}
+    end
+
+    def update(new_delta, next_measurement_time, %{current: current, pending: pending} = state) do
+      diff = new_delta - (current + pending)
+      t = next_measurement_time - monotonic_milliseconds
+      d = (diff / t)
+      %{ current: current, pending: diff, d: d, time: monotonic_milliseconds}
+    end
+
+    def current(%{current: current, pending: 0} = state) do
+      {current, state}
+    end
+
+    def current(%{current: current, pending: pending, d: d, time: t} = state) do
+      now = monotonic_milliseconds
+      dt  = now - t
+      c   = round Float.ceil(d * dt)
+      c   = Enum.min [pending, c]
+      current = current + c
+      pending = pending - c
+      {current, %{state | current: current, pending: pending, time: now}}
+    end
+  end
+
   defmodule S do
     defstruct queue:       :queue.new,
               stream_info: nil,
               status:      :stopped,
-              count:       0
+              count:       0,
+              time_delta:  nil
   end
 
   def start_link(stream_info, name) do
@@ -30,12 +62,23 @@ defmodule Janis.Player.Buffer do
     # Logger.disable(self)
     Logger.info "Player.Buffer up"
     Process.flag(:trap_exit, true)
+    Janis.Broadcaster.Monitor.add_time_delta_listener(self)
     {:ok, %S{stream_info: stream_info}}
   end
 
   def handle_cast({:put, packet}, state) do
     state = put_packet(packet, state)
     {:noreply, state}
+  end
+
+  def handle_cast({:init_time_delta, delta}, state) do
+    Logger.debug "Init time delta, #{delta}"
+    {:noreply, %S{ state | time_delta: Delta.new(delta) }}
+  end
+
+  def handle_cast({:time_delta_change, delta, next_measurement_time} = msg, %S{time_delta: time_delta} = state) do
+    Logger.debug "Time delta change, #{monotonic_milliseconds} #{inspect msg}"
+    {:noreply, %S{state | time_delta: Delta.update(delta, next_measurement_time, time_delta)}}
   end
 
   def handle_cast(:stop, state) do
@@ -68,15 +111,20 @@ defmodule Janis.Player.Buffer do
   end
 
   def put_packet(packet, %S{status: :playing, queue: queue, stream_info: {interval_ms, _size}, count: count} = state) do
-    queue  = cons(packet, queue, count)
+    {translated_packet, state} = translate_packet(packet, state)
+    queue  = cons(translated_packet, queue, count)
     %S{ state | queue: queue, count: count + 1 }
   end
 
   def cons(packet, queue, count) do
-    translated_packet = {timestamp, _data} = Janis.Broadcaster.translate_packet(packet)
-    # Logger.debug "put #{timestamp - monotonic_microseconds}"
-    queue = :queue.in(translated_packet, queue)
+    queue = :queue.in(packet, queue)
     monitor_queue_length(queue, count)
+  end
+
+  defp translate_packet({timestamp, data}, %S{time_delta: time_delta} = state) do
+    { delta, time_delta } = Delta.current(time_delta)
+    translated_timestamp = timestamp - delta
+    { {translated_timestamp, data}, %S{ state | time_delta: time_delta } }
   end
 
   def maybe_emit_packets(%S{queue: queue} = state) do
@@ -150,6 +198,7 @@ defmodule Janis.Player.Buffer do
 
   def terminate(reason, state) do
     Logger.info "Stopping #{__MODULE__}"
+    Janis.Broadcaster.Monitor.remove_time_delta_listener(self)
     :ok
   end
 end
