@@ -140,7 +140,7 @@ defmodule Janis.Player.Buffer do
       l when l < 2 ->
         Logger.warn "Low buffer #{l}"
       l ->
-        case rem(count, 1000) do
+        case rem(count, 100) do
           0 -> Logger.debug "len #{l}"
           _ ->
         end
