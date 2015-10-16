@@ -44,6 +44,8 @@ TODO
   - https://en.m.wikipedia.org/wiki/PID_controller
   - https://controls.engin.umich.edu/wiki/index.php/PIDTuningClassical
 
+- use this ring buffer? http://www.liblfds.org/
+
 Calculate re-sampling needed
 ----------------------------
 
