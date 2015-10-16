@@ -62,6 +62,8 @@
 
 #define CLEAR_OUTPUT_EVERY_FRAME 1
 
+#define CONTEXT_HAS_DATA(c) ((c->active_packet != NULL) && (c->active_packet->len > 0) && (c->active_packet->offset < c->active_packet->len))
+
 // https://github.com/squidfunk/generic-linked-in-driver/blob/master/c_src/gen_driver.c
 
 UT_icd stream_sample_icd = {sizeof(stream_sample_t), NULL, NULL, NULL};
@@ -120,12 +122,6 @@ bool load_next_packet(audio_callback_context *context)
 	return false;
 }
 
-bool context_has_data(audio_callback_context *context)
-{
-	timestamped_packet* packet = context->active_packet;
-	return (packet->len > 0) && (packet->offset < packet->len);
-}
-
 long copy_packet_with_offset(
 		audio_callback_context *context,
 		float *out,
@@ -162,7 +158,7 @@ long copy_packet_with_offset(
 static long src_input_callback(void *cb_data, float **data) {
 		audio_callback_context *context = (audio_callback_context*)cb_data;
 		long sent = 0;
-		while (sent < OUTPUT_BUFFER_SIZE && context_has_data(context)) {
+		while ((sent < OUTPUT_BUFFER_SIZE) && CONTEXT_HAS_DATA(context)) {
 			sent += copy_packet_with_offset(context, context->buffer, OUTPUT_BUFFER_SIZE, sent);
 		}
 		*data = context->buffer;
@@ -305,7 +301,7 @@ static int audio_callback(const void* _input,
 	/* printf("requested %lu frames\r\n", frameCount); */
 
 
-	if (context_has_data(context)) {
+	if (CONTEXT_HAS_DATA(context)) {
 		packet = context->active_packet;
 	} else {
 		if (load_next_packet(context)) {
