@@ -55,7 +55,7 @@
 #define USECONDS_PER_FLOAT (USECONDS * SECONDS_PER_FLOAT)
 
 #define STREAM_STATS_WINDOW_SIZE 1000
-#define MAX_RESAMPLE_RATIO       0.004
+#define MAX_RESAMPLE_RATIO       0.005
 
 // http://stackoverflow.com/questions/3599160/unused-parameter-warnings-in-c-code
 #define UNUSED(x) (void)(x)
@@ -435,7 +435,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 
 	/* pid_init(&context->pid, 6.0, 0.0, 3.0); // perhaps best? does seem to occasionally freak */
-	pid_init(&context->pid, 4.0, 0.000, 2.0);
+	pid_init(&context->pid, 4.0, 0.000, 4.0);
 
 	stream_stats_init(context->timestamp_offset_stats, STREAM_STATS_WINDOW_SIZE);
 
