@@ -39,11 +39,13 @@ defmodule Janis.Player.Buffer do
   end
 
   defmodule S do
-    defstruct queue:       :queue.new,
-              stream_info: nil,
-              status:      :stopped,
-              count:       0,
-              time_delta:  nil
+    defstruct queue:           :queue.new,
+              stream_info:     nil,
+              status:          :stopped,
+              count:           0,
+              time_delta:      nil,
+              last_emit_check: nil
+
   end
 
   def start_link(stream_info, name) do
@@ -105,8 +107,8 @@ defmodule Janis.Player.Buffer do
     {:error, :empty}
   end
 
-  def put_packet(packet, %S{status: :stopped, stream_info: {interval_ms, _size}} = state) do
-    :timer.send_interval(2, :check_emit)
+  def put_packet(packet, %S{status: :stopped} = state) do
+    :timer.send_interval(check_emit_interval(state), :check_emit)
     put_packet(packet, %S{state | status: :playing})
   end
 
@@ -114,6 +116,10 @@ defmodule Janis.Player.Buffer do
     {translated_packet, state} = translate_packet(packet, state)
     queue  = cons(translated_packet, queue, count)
     %S{ state | queue: queue, count: count + 1 }
+  end
+
+  defp check_emit_interval(%S{stream_info: {interval_ms, _size}}) do
+    round(interval_ms / 4)
   end
 
   def cons(packet, queue, count) do
@@ -131,11 +137,18 @@ defmodule Janis.Player.Buffer do
     maybe_emit_packets(queue, state)
   end
 
-  def maybe_emit_packets(queue, %S{stream_info: {interval_ms, _size}} = state) do
+  def maybe_emit_packets(queue, %S{stream_info: {interval_ms, _size}, last_emit_check: last_check} = state) do
+
+    last_check = case last_check do
+      c when is_nil(c) -> monotonic_microseconds
+      c -> c
+    end
+
+    emit_interval = check_emit_interval(state)
+    end_period = last_check + (emit_interval + (2 * interval_ms)) * 1000
 
     # packets = :queue.to_list(queue)
     # now = monotonic_microseconds
-    interval_us = interval_ms * 1000
     #
     # {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
     #   (t - now) < interval_us
@@ -150,11 +163,14 @@ defmodule Janis.Player.Buffer do
     #
     # state
 
-    case :queue.head(queue) do
+
+    state = case :queue.peek(queue) do
       :empty -> state
-      {first_timestamp, _} = first_packet ->
-        case first_timestamp - monotonic_microseconds do
-          i when i < interval_us ->
+
+      {:value, {first_timestamp, _} = first_packet} ->
+        # IO.inspect [:check, first_timestamp, end_period, first_timestamp - end_period]
+        case first_timestamp do
+          t when t <= end_period ->
             state = emit_packet(state, first_packet)
             queue = :queue.tail(queue)
             %S{state | queue: queue, status: :playing }
@@ -162,6 +178,7 @@ defmodule Janis.Player.Buffer do
             state
         end
     end
+    %S{ state | last_emit_check: monotonic_microseconds }
   end
 
   def emit_packets(state, []) do
