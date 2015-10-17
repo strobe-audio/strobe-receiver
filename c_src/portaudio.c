@@ -166,7 +166,7 @@ static long src_input_callback(void *cb_data, float **data) {
 		return sent / CHANNEL_COUNT;
 }
 
-uint64_t stream_time_to_absolute_time(
+static inline uint64_t stream_time_to_absolute_time(
 		audio_callback_context *context,
 		uint64_t current_time,
 		const PaStreamCallbackTimeInfo*   timeInfo
@@ -176,14 +176,14 @@ uint64_t stream_time_to_absolute_time(
 }
 
 
-uint64_t packet_output_absolute_time(timestamped_packet *packet) {
+static inline uint64_t packet_output_absolute_time(timestamped_packet *packet) {
 	return packet->timestamp + (uint64_t)llround(packet->played * USECONDS_PER_FLOAT);
 }
 
 // returns +ve if the packet is ahead of where it's supposed to be i.e. the audio is playing too fast
 //           0 if the packet is playing exactly at the right time
 // and     -ve if the packet is behind where it's supposed to be i.e. the audio is playing too slowly
-int64_t packet_output_offset_absolute_time(
+static inline int64_t packet_output_offset_absolute_time(
 		uint64_t current_time,
 		timestamped_packet *packet
 		) {
@@ -191,7 +191,7 @@ int64_t packet_output_offset_absolute_time(
 }
 
 
-void send_packet(audio_callback_context *context,
+static inline void send_packet(audio_callback_context *context,
 		float *out,
 		unsigned long frameCount,
 		const PaStreamCallbackTimeInfo*   timeInfo
