@@ -117,7 +117,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def cons(packet, queue, count) do
-    queue = :queue.in(packet, queue)
+    queue = :queue.snoc(queue, packet)
     monitor_queue_length(queue, count)
   end
 
@@ -133,35 +133,35 @@ defmodule Janis.Player.Buffer do
 
   def maybe_emit_packets(queue, %S{stream_info: {interval_ms, _size}} = state) do
 
-    packets = :queue.to_list(queue)
-    now = monotonic_microseconds
+    # packets = :queue.to_list(queue)
+    # now = monotonic_microseconds
     interval_us = interval_ms * 1000
-
-    {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
-      (t - now) < interval_us
-    end
-
-
-    unless Enum.empty?(to_emit) do
-      queue = :queue.from_list(to_keep)
-      state = emit_packets(state, to_emit)
-      state = %S{state | queue: queue, status: :playing }
-    end
-
-    state
-    # case :queue.peek(queue) do
-    #   {:value, {first_timestamp, _} = first_packet} ->
-    #     case first_timestamp - monotonic_microseconds do
-    #       i when i < interval_us ->
-    #         state = emit_packet(state, first_packet)
-    #         queue = :queue.drop(queue)
-    #         %S{state | queue: queue, status: :playing }
-    #       _ ->
-    #         state
-    #     end
-    #   :empty ->
-    #     state
+    #
+    # {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
+    #   (t - now) < interval_us
     # end
+    #
+    #
+    # unless Enum.empty?(to_emit) do
+    #   queue = :queue.from_list(to_keep)
+    #   state = emit_packets(state, to_emit)
+    #   state = %S{state | queue: queue, status: :playing }
+    # end
+    #
+    # state
+
+    case :queue.head(queue) do
+      :empty -> state
+      {first_timestamp, _} = first_packet ->
+        case first_timestamp - monotonic_microseconds do
+          i when i < interval_us ->
+            state = emit_packet(state, first_packet)
+            queue = :queue.tail(queue)
+            %S{state | queue: queue, status: :playing }
+          _ ->
+            state
+        end
+    end
   end
 
   def emit_packets(state, []) do
