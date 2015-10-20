@@ -232,7 +232,6 @@ static inline void send_packet(audio_callback_context *context,
 		resample_ratio = 1.0 - control;
 	}
 
-	/* src_set_ratio(context->resampler, resample_ratio); */
 	frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
 
 	if (frames == 0) {
