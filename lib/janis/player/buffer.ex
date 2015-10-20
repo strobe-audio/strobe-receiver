@@ -147,38 +147,30 @@ defmodule Janis.Player.Buffer do
     emit_interval = check_emit_interval(state)
     end_period = last_check + (emit_interval + (2 * interval_ms)) * 1000
 
-    # packets = :queue.to_list(queue)
-    # now = monotonic_microseconds
-    #
-    # {to_emit, to_keep} = Enum.partition packets, fn({t, _}) ->
-    #   (t - now) < interval_us
-    # end
-    #
-    #
-    # unless Enum.empty?(to_emit) do
-    #   queue = :queue.from_list(to_keep)
-    #   state = emit_packets(state, to_emit)
-    #   state = %S{state | queue: queue, status: :playing }
-    # end
-    #
-    # state
+    { queue, packets } = peek_queue(queue, end_period, [])
 
+    state = case length(packets) do
+      n when n > 0 ->
+        %S{ emit_packets(state, packets) | queue: queue, status: :playing }
+      _ -> state
+    end
 
-    state = case :queue.peek(queue) do
-      :empty -> state
+    %S{ state | last_emit_check: monotonic_microseconds }
+  end
+
+  def peek_queue(queue, end_period, packets_to_emit) do
+    case :queue.peek(queue) do
+      :empty -> { queue, packets_to_emit }
 
       {:value, {first_timestamp, _} = first_packet} ->
-        # IO.inspect [:check, first_timestamp, end_period, first_timestamp - end_period]
         case first_timestamp do
           t when t <= end_period ->
-            state = emit_packet(state, first_packet)
             queue = :queue.tail(queue)
-            %S{state | queue: queue, status: :playing }
+            peek_queue(queue, end_period, [ first_packet | packets_to_emit ])
           _ ->
-            state
+            { queue, packets_to_emit }
         end
     end
-    %S{ state | last_emit_check: monotonic_microseconds }
   end
 
   def emit_packets(state, []) do
