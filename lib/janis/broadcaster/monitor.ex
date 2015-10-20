@@ -38,7 +38,7 @@ defmodule Janis.Broadcaster.Monitor do
   # def init({service, address, port, config} = broadcaster) do
   def init({service, address, port, config} = broadcaster) do
     Logger.info "Starting Broadcaster.Monitor #{inspect broadcaster}"
-    Process.flag(:trap_exit, true)
+    # Process.flag(:trap_exit, true)
     {:ok, collect_measurements(%S{broadcaster: broadcaster})}
   end
 
@@ -56,8 +56,8 @@ defmodule Janis.Broadcaster.Monitor do
   defp collect_measurements(%S{measurement_count: count, broadcaster: broadcaster} = state) do
     {interval, sample_size, delay} = case count do
       _ when count  < 10 -> { 50, 11, 0}
-      _ when count >= 20 -> { 80, 21, 4000}
-      _ when count >= 10 -> { 80, 21, 1000}
+      _ when count >= 20 -> { 80, 21, 30_000}
+      _ when count >= 10 -> { 80, 21, 10_000}
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
     %S{ state | next_measurement_time: monotonic_milliseconds + delay + (sample_size * interval) }
@@ -193,6 +193,7 @@ defmodule Janis.Broadcaster.Monitor do
     end
 
     def terminate(reason, state) do
+      Logger.warn "Janis.Broadcaster.Monitor terminating... #{ inspect reason }"
       :ok
     end
   end
