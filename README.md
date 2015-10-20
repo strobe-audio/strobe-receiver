@@ -32,6 +32,15 @@ Dependencies
 
      # sudo apt-get install -y libsamplerate0 libsamplerate0-dev
 
+Running
+------
+
+### Linux
+
+Use chrt to use a FIFO scheduler by default (plus running as root enables the fifo scheduler for the audio thread)
+
+    make && sudo chrt -f 99  /home/garry/elixir-current/bin/iex -S /home/garry/elixir-current/bin/mix
+
 TODO
 ----
 
