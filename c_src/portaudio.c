@@ -213,7 +213,6 @@ static inline void send_packet(audio_callback_context *context,
 		context->playing = true;
 	}
 
-	const int jitter = 0;
 	unsigned long frames;
 	double resample_ratio = 1.0;
 
@@ -226,20 +225,11 @@ static inline void send_packet(audio_callback_context *context,
 	double smoothed_timestamp_offset = (double)context->timestamp_offset_stats->average;
 
 	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
-		if ((smoothed_timestamp_offset < -jitter) || (smoothed_timestamp_offset > jitter)) {
-			double time = ((double)now)/USECONDS;
-			control = pid_control(&context->pid, time, smoothed_timestamp_offset, 0.0);
-			control = MAX(control, -MAX_RESAMPLE_RATIO);
-			control = MIN(control, MAX_RESAMPLE_RATIO);
-			resample_ratio = 1.0 - control;
-		}
-
-		/* if (smoothed_timestamp_offset >= jitter) { */
-		/* 	resample_ratio = 1.0 + control; */
-		/* } */
-		/* if (smoothed_timestamp_offset <= -jitter) { */
-		/* 	resample_ratio = 0.998; */
-		/* } */
+		double time = ((double)now)/USECONDS;
+		control = pid_control(&context->pid, time, smoothed_timestamp_offset, 0.0);
+		control = MAX(control, -MAX_RESAMPLE_RATIO);
+		control = MIN(control, MAX_RESAMPLE_RATIO);
+		resample_ratio = 1.0 - control;
 	}
 
 	/* src_set_ratio(context->resampler, resample_ratio); */
