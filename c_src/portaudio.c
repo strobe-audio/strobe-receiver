@@ -245,9 +245,6 @@ static inline void send_packet(audio_callback_context *context,
 
 	if (frames < frameCount) {
 		printf("ERROR: short frames %lu\r\n", frameCount - frames);
-		// this reset seems to avoid issues when stopping a stream
-		// without it the resampler would occasionally get into some kind
-		// of internal infernal loop...
 	}
 
 
