@@ -404,7 +404,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 
 	/* pid_init(&context->pid, 6.0, 0.0, 3.0); // perhaps best? does seem to occasionally freak */
-	pid_init(&context->pid, 4.0, 0.000, 4.0);
+	pid_init(&context->pid, 8.0, 2.000, 4.0);
 
 	stream_stats_init(context->timestamp_offset_stats, STREAM_STATS_WINDOW_SIZE);
 
