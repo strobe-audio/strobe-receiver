@@ -60,8 +60,6 @@
 // http://stackoverflow.com/questions/3599160/unused-parameter-warnings-in-c-code
 #define UNUSED(x) (void)(x)
 
-#define CLEAR_OUTPUT_EVERY_FRAME 1
-
 #define CONTEXT_HAS_DATA(c) ((c->active_packet != NULL) && (c->active_packet->len > 0) && (c->active_packet->offset < c->active_packet->len))
 
 // https://github.com/squidfunk/generic-linked-in-driver/blob/master/c_src/gen_driver.c
@@ -205,9 +203,7 @@ static inline void send_packet(audio_callback_context *context,
 		if (packet_time > output_time) {
 			// not our time... wait
 			printf("waiting %"PRIi64"\r\n", packet_time - output_time);
-#ifndef CLEAR_OUTPUT_EVERY_FRAME
-			memset(out, 0, requestedLen * context->sample_size);
-#endif
+			memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
 			return;
 		}
 		context->playing = true;
@@ -245,6 +241,7 @@ static inline void send_packet(audio_callback_context *context,
 
 	if (frames < frameCount) {
 		printf("ERROR: short frames %lu\r\n", frameCount - frames);
+		memset(out+(frames*CHANNEL_COUNT), 0, (frameCount - frames) * CHANNEL_COUNT * context->sample_size);
 	}
 
 
@@ -272,16 +269,6 @@ static int audio_callback(const void* _input,
 	++context->callback_count;
 
 
-#ifdef CLEAR_OUTPUT_EVERY_FRAME
-	// just clear the buffer - saves a lot of fussing at transition points
-	// at the cost of a tiny overhead every frame
-	memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
-#endif
-
-
-	/* printf("requested %lu frames\r\n", frameCount); */
-
-
 	if (CONTEXT_HAS_DATA(context)) {
 		packet = context->active_packet;
 	} else {
@@ -294,9 +281,7 @@ static int audio_callback(const void* _input,
 			context->playing = false;
 			playback_stopped(context);
 		}
-#ifndef CLEAR_OUTPUT_EVERY_FRAME
 		memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
-#endif
 	} else {
 		send_packet(context, out, frameCount, timeInfo);
 	}
