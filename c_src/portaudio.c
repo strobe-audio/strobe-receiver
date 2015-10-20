@@ -145,11 +145,7 @@ long copy_packet_with_offset(
 	packet->offset = offset;
 
 	if (packet->offset == packet->len) {
-		if (!load_next_packet(context)) {
-			// reset the sampler
-			playback_stopped(context);
-			context->active_packet->len = 0;
-		}
+		load_next_packet(context);
 	}
 
 	return len;
@@ -263,7 +259,6 @@ static inline void send_packet(audio_callback_context *context,
 		// this reset seems to avoid issues when stopping a stream
 		// without it the resampler would occasionally get into some kind
 		// of internal infernal loop...
-		playback_stopped(context);
 	}
 
 
@@ -309,7 +304,10 @@ static int audio_callback(const void* _input,
 		}
 	}
 	if (packet == NULL) {
-		context->playing = false;
+		if (context->playing) {
+			context->playing = false;
+			playback_stopped(context);
+		}
 #ifndef CLEAR_OUTPUT_EVERY_FRAME
 		memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
 #endif
