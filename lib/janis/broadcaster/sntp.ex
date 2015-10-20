@@ -54,7 +54,7 @@ defmodule Janis.Broadcaster.SNTP do
   defp wait_response(socket) do
     receive do
     after 0 ->
-      :gen_udp.recv(socket, 0, 1000) |> parse_response
+      :gen_udp.recv(socket, 0, 4000) |> parse_response
     end
   end
 
