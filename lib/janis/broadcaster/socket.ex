@@ -78,6 +78,12 @@ defmodule Janis.Broadcaster.Socket do
     {:noreply, state}
   end
 
+  def handle_cast({:event, %Event{event: "set_volume", payload: %{"volume" => volume}}} = _event, state) do
+    Logger.debug "Set volume %{volume}"
+    :ok = Janis.Audio.volume(volume)
+    {:noreply, state}
+  end
+
   def handle_cast({:event, event}, state) do
     Logger.debug "Event #{inspect event}"
     {:noreply, state}
@@ -99,9 +105,15 @@ defmodule Janis.Broadcaster.Socket do
     Janis.receiver_id
   end
 
-  defp join_zone(%{"address" => address, "port" => port, "interval" => packet_interval, "size" => packet_size}) do
+  defp join_zone(%{"address" => address, "port" => port, "interval" => packet_interval, "size" => packet_size, "volume" => volume}) do
     address = List.to_tuple(address)
-    IO.inspect [:join, address, port, packet_interval, packet_size]
+    IO.inspect [:join, address, port, packet_interval, packet_size, volume]
+    :ok = Janis.Audio.volume(volume)
     {:ok, pid} = Janis.Player.start_player({address, port}, {packet_interval, packet_size})
+  end
+
+  # Handle missing volume param
+  defp join_zone(config) do
+    join_zone(Map.put(config, "volume", 1.0))
   end
 end
