@@ -37,9 +37,11 @@ Running
 
 ### Linux
 
-Use chrt to use a FIFO scheduler by default (plus running as root enables the fifo scheduler for the audio thread)
+Use chrt to use a Round-robin scheduler by default (plus running as root enables the fifo scheduler for the audio thread)
 
-    make && sudo chrt -f 99  /home/garry/elixir-current/bin/iex -S /home/garry/elixir-current/bin/mix
+    make && sudo chrt --rr 99  /home/garry/elixir-current/bin/iex -S /home/garry/elixir-current/bin/mix
+
+Running the entire app as fifo seems like a good idea but seems to lead to madness -- perhaps because the receiver starves the rest of the system of processor time (?). Things stop working anyway.
 
 TODO
 ----
