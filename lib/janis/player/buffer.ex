@@ -44,7 +44,8 @@ defmodule Janis.Player.Buffer do
               status:          :stopped,
               count:           0,
               time_delta:      nil,
-              last_emit_check: nil
+              last_emit_check: nil,
+              interval_timer:  nil
 
   end
 
@@ -108,8 +109,8 @@ defmodule Janis.Player.Buffer do
   end
 
   def put_packet(packet, %S{status: :stopped} = state) do
-    :timer.send_interval(check_emit_interval(state), :check_emit)
-    put_packet(packet, %S{state | status: :playing})
+    {:ok, tref} = :timer.send_interval(check_emit_interval(state), :check_emit)
+    put_packet(packet, %S{state | status: :playing, interval_timer: tref})
   end
 
   def put_packet(packet, %S{status: :playing, queue: queue, stream_info: {interval_ms, _size}, count: count} = state) do
@@ -205,8 +206,9 @@ defmodule Janis.Player.Buffer do
     queue
   end
 
-  def terminate(reason, state) do
+  def terminate(_reason, %S{interval_timer: tref} = _state) do
     Logger.info "Stopping #{__MODULE__}"
+    {:ok, :cancel} = :timer.cancel(tref)
     Janis.Broadcaster.Monitor.remove_time_delta_listener(self)
     :ok
   end
