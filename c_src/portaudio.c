@@ -106,6 +106,7 @@ typedef struct portaudio_state {
 
 void playback_stopped(audio_callback_context *context) {
 	printf("Playback stopped...\r\n");
+	context->playing = false;
 	src_reset(context->resampler);
 	stream_stats_reset(context->timestamp_offset_stats);
 }
@@ -244,6 +245,9 @@ static inline void send_packet(audio_callback_context *context,
 		memset(out+(frames*CHANNEL_COUNT), 0, (frameCount - frames) * CHANNEL_COUNT * context->sample_size);
 	}
 
+	if (!CONTEXT_HAS_DATA(context)) {
+		playback_stopped(context);
+	}
 
 	if ((context->callback_count % 400) == 0) {
 
@@ -277,10 +281,6 @@ static int audio_callback(const void* _input,
 		}
 	}
 	if (packet == NULL) {
-		if (context->playing) {
-			context->playing = false;
-			playback_stopped(context);
-		}
 		memset(out, 0, frameCount * CHANNEL_COUNT * context->sample_size);
 	} else {
 		send_packet(context, out, frameCount, timeInfo);
