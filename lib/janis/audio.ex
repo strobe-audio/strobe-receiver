@@ -13,6 +13,14 @@ defmodule Janis.Audio do
     GenServer.cast(@name, {:play, packet})
   end
 
+  def volume do
+    GenServer.call(@name, :get_volume)
+  end
+
+  def volume(volume) do
+    GenServer.cast(@name, {:set_volume, volume})
+  end
+
   def time do
     GenServer.call(@name, :time)
   end

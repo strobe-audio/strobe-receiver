@@ -32,14 +32,27 @@ defmodule Janis.Audio.PortAudio do
   @play_command 1
   @time_command 2
   @flsh_command 3
+  @gvol_command 4
+  @svol_command 5
 
   def handle_call(:time, _from, {port} = state) do
     {:ok, c_time} = Port.control(port, @time_command, <<>>) |> decode_port_response
     {:reply, {:ok, c_time, monotonic_microseconds}, state}
   end
 
+  def handle_call(:get_volume, _from, {port} = state) do
+    {:ok, volume} = Port.control(port, @gvol_command, <<>>) |> decode_port_response
+    {:reply, {:ok, volume}, state}
+  end
+
   def handle_cast({:play, {_timestamp, _data} = packet}, {port} = state) do
     state = play_packet(packet, state)
+    {:noreply, state}
+  end
+
+  def handle_cast({:set_volume, volume}, {port} = state) do
+    Logger.debug "Set volume #{volume}"
+    :ok = Port.control(port, @svol_command, <<volume::size(32)-native-float>>) |> decode_port_response
     {:noreply, state}
   end
 

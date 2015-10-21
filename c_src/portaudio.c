@@ -37,6 +37,8 @@
 #define PLAY_COMMAND  (1)
 #define TIME_COMMAND  (2)
 #define FLSH_COMMAND  (3)
+#define GVOL_COMMAND  (4)
+#define SVOL_COMMAND  (5)
 
 #define USECONDS      (1000000.0)
 #define PACKET_SIZE   (1764) // 3528 bytes = 1,764 shorts
@@ -96,6 +98,7 @@ typedef struct audio_callback_context {
 
 	pid_state_t          pid;
 
+	float                volume;
 } audio_callback_context;
 
 typedef struct portaudio_state {
@@ -415,6 +418,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 	// initialize stats on context
 	context->callback_count           = (uint64_t)0;
 	context->playing                  = false;
+	context->volume                   = 1.0f;
 
 	PaUtil_InitializeRingBuffer(&context->audio_buffer, sizeof(timestamped_packet), BUFFER_SIZE, context->audio_buffer_data);
 
@@ -483,6 +487,17 @@ static void encode_response(char *rbuf, int *index, long buffer_size) {
 	ei_encode_long(rbuf, index, buffer_size);
 }
 
+// based on src_short_to_float_array https://github.com/erikd/libsamplerate/blob/master/src/samplerate.c
+static inline void short_to_float_array(const short *in, float *out, float volume, int len)
+{
+	while (len) {
+		len--;
+		out[len] = volume * (float) ((in[len]) / (1.0 * 0x8000)) ;
+	}
+
+	return;
+}
+
 static ErlDrvSSizeT portaudio_drv_control(
 		ErlDrvData   drv_data,
 		unsigned int cmd,
@@ -516,7 +531,7 @@ static ErlDrvSSizeT portaudio_drv_control(
 		// this conversion also translates the data from le to native-endian
 		// using `le16toh`. The code for `src_short_to_float_array` is insanely simple
 		// so just a matter of copy-paste & adjust.
-		src_short_to_float_array((short*)(buf + 10), packet.data, packet.len);
+		short_to_float_array((short*)(buf + 10), packet.data, context->volume, packet.len);
 
 		PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
 
@@ -528,6 +543,14 @@ static ErlDrvSSizeT portaudio_drv_control(
 		ei_encode_tuple_header(*rbuf, &index, 2);
 		ei_encode_atom(*rbuf, &index, "ok");
 		ei_encode_ulonglong(*rbuf, &index, t);
+	} else if (cmd == GVOL_COMMAND) {
+		ei_encode_tuple_header(*rbuf, &index, 2);
+		ei_encode_atom(*rbuf, &index, "ok");
+		ei_encode_double(*rbuf, &index, (double)context->volume);
+	} else if (cmd == SVOL_COMMAND) {
+		float volume = *((float *)buf);
+		context->volume = MAX(MIN(volume, 1.0), 0.0);
+		ei_encode_atom(*rbuf, &index, "ok");
 	}
 	return (ErlDrvSSizeT)index;
 }
