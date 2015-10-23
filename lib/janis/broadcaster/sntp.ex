@@ -45,17 +45,20 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   defp ntp_measure(%{broadcaster: {address, port} = _broadcaster, sync_count: count} = state) do
+
     {:ok, socket} = :gen_udp.open(0, [mode: :binary, ip: {0, 0, 0, 0}, active: false])
 
     packet = <<
-    count::size(64)-little-unsigned-integer,
-    monotonic_microseconds::size(64)-little-signed-integer
+      count::size(64)-little-unsigned-integer,
+      monotonic_microseconds::size(64)-little-signed-integer
     >>
-    :ok = :gen_udp.send(socket, address, port, packet)
 
-    response = wait_response(socket)
+    response = case :gen_udp.send(socket, address, port, packet) do
+      {:error, _} = err -> err
+      :ok               -> wait_response(socket)
+    end
 
-    :ok = :gen_udp.close(socket)
+    :gen_udp.close(socket)
     {:reply, response, %{state | sync_count: count + 1}}
   end
 
