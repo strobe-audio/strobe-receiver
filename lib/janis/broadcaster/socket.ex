@@ -79,7 +79,6 @@ defmodule Janis.Broadcaster.Socket do
   end
 
   def handle_cast({:event, %Event{event: "set_volume", payload: %{"volume" => volume}}} = _event, state) do
-    Logger.debug "Set volume %{volume}"
     :ok = Janis.Audio.volume(volume)
     {:noreply, state}
   end
