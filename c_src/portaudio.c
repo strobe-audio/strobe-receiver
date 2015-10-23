@@ -433,7 +433,10 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	int src_error = 0;
 
-	context->resampler = src_callback_new(src_input_callback, SRC_SINC_FASTEST, CHANNEL_COUNT, &src_error, context);
+	// SRC_SINC_FASTEST
+	// SRC_SINC_MEDIUM_QUALITY
+	// SRC_SINC_BEST_QUALITY
+	context->resampler = src_callback_new(src_input_callback, SRC_SINC_MEDIUM_QUALITY, CHANNEL_COUNT, &src_error, context);
 
 	if (context->resampler == NULL && (src_error != 0)) {
 		printf("!! Error initializing resampler %d\r\n", src_error);
@@ -528,10 +531,6 @@ static ErlDrvSSizeT portaudio_drv_control(
 		};
 
 		// conversion to float needed by libsamplerate
-		// TODO: the samples are little-endian. I need to make sure that
-		// this conversion also translates the data from le to native-endian
-		// using `le16toh`. The code for `src_short_to_float_array` is insanely simple
-		// so just a matter of copy-paste & adjust.
 		short_to_float_array((short*)(buf + 10), packet.data, context->volume, packet.len);
 
 		PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
