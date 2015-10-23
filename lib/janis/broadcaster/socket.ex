@@ -10,42 +10,51 @@ defmodule Janis.Broadcaster.Socket do
   end
 
   defmodule Poll do
+    use     GenServer
     require Logger
 
     def start_link(parent, socket) do
-      :proc_lib.start_link(__MODULE__, :init, [parent, socket])
+      GenServer.start_link(__MODULE__, [parent, socket], [])
     end
 
-    def init(parent, socket) do
-      Logger.debug "starting poll"
-      Process.flag(:trap_exit, true)
-      :proc_lib.init_ack({:ok, self})
-      state = {parent, socket}
-      loop(state)
+    def init([parent, socket]) do
+      Logger.debug "Starting #{__MODULE__}"
+      state = start_task(%{parent: parent, socket: socket, task: nil})
+      {:ok, state}
     end
 
-    def loop({_parent, socket} = state) do
-      receive do
-      after 0 ->
-        Logger.debug "Waiting for message..."
-        Socket.Web.recv!(socket) |> process_event(state)
-      end
-      loop(state)
+    defp start_task(%{socket: socket, task: nil} = state) do
+      task = Task.async fn -> Socket.Web.recv!(socket) end
+      %{ state | task: task }
     end
 
-    defp process_event({:text, msg}, {parent, _socket} = state) do
+    defp start_task(state) do
+      Logger.warn "Task already running..."
+      state
+    end
+
+    # Callback from our Task
+    def handle_info({_task, event}, %{ task: task } = state) do
+      process_event(event, state)
+      {:noreply, %{state | task: nil}}
+    end
+
+    def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
+      {:noreply, start_task(state)}
+    end
+
+    defp process_event({:text, msg}, %{parent: parent} = _state) do
       event = Poison.decode! msg, as: Event
       GenServer.cast(parent, {:event, event})
     end
 
-    defp process_event(event, {parent, _socket} = state) do
+    defp process_event(event, %{parent: parent} = _state) do
       Logger.debug "Got event #{inspect event}"
       GenServer.cast(parent, {:event, event})
     end
   end
 
   def join(%{latency: _latency} = connection) do
-    IO.inspect [Socket, :join, id]
     GenServer.cast(@name, {:join, connection})
   end
 
