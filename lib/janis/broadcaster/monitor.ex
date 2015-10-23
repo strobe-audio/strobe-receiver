@@ -54,10 +54,9 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   defp collect_measurements(%S{measurement_count: count, broadcaster: broadcaster} = state) do
-    {interval, sample_size, delay} = case count do
-      _ when count  < 10 -> { 50, 11, 0}
-      _ when count >= 20 -> { 80, 21, 30_000}
-      _ when count >= 10 -> { 80, 21, 10_000}
+    {interval, sample_size, delay} = cond do
+      count < 10 -> { 50, 11, 0 }
+      true       -> { 80, 11, 10_000 }
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
     %S{ state | next_measurement_time: monotonic_milliseconds + delay + (sample_size * interval) }
