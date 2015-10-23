@@ -52,13 +52,21 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   defp wait_response(socket) do
+    :inet.setopts(socket, [active: :once])
     receive do
-    after 0 ->
-      :gen_udp.recv(socket, 0, 4000) |> parse_response
+      {:udp, ^socket, _addr, _port, data} -> parse_response({_addr, _port, data})
+      # what else would we get
+      msg -> {:error, msg}
+    after 100 ->
+      {:error, :timeout}
     end
   end
 
-  defp parse_response({:ok, {_addr, _port, data}}) do
+  defp parse_response({:ok, {_addr, _port, _data} = packet}) do
+    parse_response(packet)
+  end
+
+  defp parse_response({_addr, _port, data}) do
     now = monotonic_microseconds
     << count::size(64)-little-unsigned-integer,
        originate::size(64)-little-signed-integer,
