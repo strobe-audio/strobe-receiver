@@ -10,6 +10,7 @@ defmodule Janis.Player.Buffer do
   defmodule Delta do
     @moduledoc "Smear changes to time delta into the smallest increment possible"
 
+    require Logger
     require Monotonic
 
     def new(current_delta) do
@@ -25,6 +26,14 @@ defmodule Janis.Player.Buffer do
 
     def current(%{current: current, pending: 0} = state) do
       {current, state}
+    end
+
+    def current(%{current: current, pending: pending} = state) when pending > 1000 do
+      Logger.debug "Applying large time delta #{pending}"
+      now = monotonic_milliseconds
+      current = current + pending
+      pending = 0
+      {current, %{state | current: current, pending: pending, time: now}}
     end
 
     def current(%{current: current, pending: pending, d: d, time: t} = state) do
