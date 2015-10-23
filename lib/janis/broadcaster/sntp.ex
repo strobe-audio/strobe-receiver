@@ -1,6 +1,7 @@
 defmodule Janis.Broadcaster.SNTP do
-  use GenServer
-  use Monotonic
+  use     GenServer
+  use     Monotonic
+  require Logger
 
   @name Janis.Broadcaster.SNTP
 
@@ -9,7 +10,14 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   def init({address, port}) do
+    Logger.info "#{__MODULE__} initializing #{inspect {address, port}}"
+    Process.flag(:trap_exit, true)
     {:ok, %{broadcaster: {parse_address(address), port}, sync_count: 0}}
+  end
+
+  def terminate(reason, state) do
+    Logger.warn "#{__MODULE__} terminating #{inspect reason}"
+    :ok
   end
 
   defp parse_address(addr_string) do

@@ -38,7 +38,7 @@ defmodule Janis.Broadcaster.Monitor do
   # def init({service, address, port, config} = broadcaster) do
   def init({service, address, port, config} = broadcaster) do
     Logger.info "Starting Broadcaster.Monitor #{inspect broadcaster}"
-    # Process.flag(:trap_exit, true)
+    Process.flag(:trap_exit, true)
     {:ok, collect_measurements(%S{broadcaster: broadcaster})}
   end
 
@@ -48,7 +48,7 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   def terminate(reason, state) do
-    Logger.info "Stopping Broadcaster.Monitor"
+    Logger.info "Stopping #{__MODULE__} #{inspect reason}"
     Janis.Player.stop_player
     :ok
   end
