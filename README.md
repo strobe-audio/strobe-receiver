@@ -43,6 +43,18 @@ Use chrt to use a Round-robin scheduler by default (plus running as root enables
 
 Running the entire app as fifo seems like a good idea but seems to lead to madness -- perhaps because the receiver starves the rest of the system of processor time (?). Things stop working anyway.
 
+Audio Setup
+-----------
+
+The sound card clicks between tracks unless you disable the auto-mute feature.
+
+Exactly the best way to do this is a WIP but as a working solution:
+
+- run `alsamixer`
+- set "Auto Mute Time Left" and "Auto Mute Time Right" to their max values (10.66s <- ??)
+- `/usr/bin/amixer -c 0 sset "Auto Mute" Disabled` - not sure this does anything
+- `sudo alsactl store` save the settings
+
 TODO
 ----
 
