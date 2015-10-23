@@ -13,7 +13,7 @@ defmodule Janis.Broadcaster.Supervisor do
       worker(Janis.Broadcaster.Socket, [service, address, port, config], []),
       worker(Janis.Broadcaster.Monitor, [service, address, port, config], [])
     ]
-    supervise(children, strategy: :one_for_one)
+    supervise(children, strategy: :one_for_all)
   end
 end
 
