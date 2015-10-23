@@ -62,7 +62,7 @@ defmodule Janis.Broadcaster.Socket do
   end
 
   def terminate(reason, state) do
-    Logger.info "Stopping Broadcaster.Socket"
+    Logger.info "Stopping #{__MODULE__} #{ inspect reason }"
     :ok
   end
 
