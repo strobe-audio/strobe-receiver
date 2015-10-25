@@ -217,9 +217,16 @@ defmodule Janis.Player.Buffer do
 
   def terminate(_reason, %S{interval_timer: tref} = _state) do
     Logger.info "Stopping #{__MODULE__}"
-    {:ok, :cancel} = :timer.cancel(tref)
+    remove_handle(tref)
     Janis.Broadcaster.Monitor.remove_time_delta_listener(self)
     :ok
+  end
+
+  defp remove_handle(nil) do
+  end
+
+  defp remove_handle(tref) do
+    {:ok, :cancel} = :timer.cancel(tref)
   end
 end
 
