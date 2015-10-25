@@ -1,14 +1,6 @@
 #include "stream_statistics.h"
 #include <stdio.h>
 
-// where α is the smoothing factor, and 0 < α < 1. In other words, the smoothed
-// statistic st is a simple weighted average of the current observation xt and the
-// previous smoothed statistic st−1. The term smoothing factor applied to α here
-// is something of a misnomer, as larger values of α actually reduce the level of
-// smoothing, and in the limiting case with α = 1 the output series is just the
-// same as the original series
-#define BEST_ALPHA (0.0001)
-#define ALPHA 0.001
 
 // taken from:
 // http://jonisalonen.com/2014/efficient-and-accurate-rolling-standard-deviation/
