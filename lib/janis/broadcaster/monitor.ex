@@ -1,5 +1,6 @@
 defmodule Janis.Broadcaster.Monitor do
   use     Monotonic
+  use     GenServer
   require Logger
   alias   Janis.Broadcaster.Monitor.Collector
 
