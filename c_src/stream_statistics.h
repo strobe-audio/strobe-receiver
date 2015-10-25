@@ -8,8 +8,6 @@ typedef struct {
 	int	      n; // window size
 	double    last_value;
 	double  	average;
-	double  	variance;
-	double  	stddev;    // sqrt(variance)
 	double    initial[INITIAL_SAMPLE_SIZE];
 	int       i;
 } stream_statistics_t;

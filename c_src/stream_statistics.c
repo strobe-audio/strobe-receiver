@@ -19,8 +19,6 @@ void stream_stats_init(stream_statistics_t *stats, int window_size) {
 	stats->n = window_size;
 	stats->last_value = 0.;
 	stats->average    = 0.;
-	/* stats->variance   = 0.; */
-	/* stats->stddev     = 0.; */
 }
 
 double initial_average(stream_statistics_t *stats) {
