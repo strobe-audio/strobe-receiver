@@ -241,7 +241,13 @@ static inline void send_packet(audio_callback_context *context,
 		}
 	}
 
-	context->active_packet->played += (frames * CHANNEL_COUNT);
+	// we can't know exactly how many frames from the current packet were actually
+	// played but we know that it can't be (much) more than the current packet offset
+	// if we switched packets in the middle of a callback iteration then some
+	// number of frames came from the packet before the active one.
+	// I could probably work this out exactly but i'm not sure it's worth the extra
+	// effort for at absolute most +- 1 frame of accuracy...
+	context->active_packet->played += MIN(frames * CHANNEL_COUNT, context->active_packet->offset);
 
 	if (frames < frameCount) {
 		printf("ERROR: short frames %lu\r\n", frameCount - frames);
