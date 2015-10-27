@@ -45,7 +45,14 @@
 #define BUFFER_SIZE   (16)
 #define SAMPLE_RATE   (44100.0)
 #define CHANNEL_COUNT (2)
-#define OUTPUT_BUFFER_SIZE (64 * CHANNEL_COUNT)
+// the smaller this buffer is, the more accurately we can judge the playback
+// position. It's functionally impossible to know exactly how many frames from
+// the current packet have actually been played (as this is controlled by the
+// libsamplerate code which is basically a black box).
+// There can be at most 1 buffer's worth of discrepency between the actual
+// playback position and the bytes sent to the resampler (since the resampler
+// works in buffer-sized chunks).
+#define OUTPUT_BUFFER_SIZE (8 * CHANNEL_COUNT)
 
 #define SECONDS_PER_FRAME  (1.0 / SAMPLE_RATE)
 #define USECONDS_PER_FRAME (USECONDS / SAMPLE_RATE)
@@ -247,7 +254,7 @@ static inline void send_packet(audio_callback_context *context,
 	// number of frames came from the packet before the active one.
 	// I could probably work this out exactly but i'm not sure it's worth the extra
 	// effort for at absolute most +- 1 frame of accuracy...
-	context->active_packet->played += MIN(frames * CHANNEL_COUNT, context->active_packet->offset);
+	context->active_packet->played = context->active_packet->offset;
 
 	if (frames < frameCount) {
 		printf("ERROR: short frames %lu\r\n", frameCount - frames);
