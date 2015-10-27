@@ -24,7 +24,6 @@
 #include "pa_ringbuffer.h"
 #include "pa_util.h"
 #include "monotonic_time.h"
-#include "least_squares.h"
 #include "stream_statistics.h"
 #include "pid.h"
 
@@ -73,8 +72,6 @@
 #define CONTEXT_HAS_DATA(c) ((c->active_packet != NULL) && (c->active_packet->len > 0) && (c->active_packet->offset < c->active_packet->len))
 
 // https://github.com/squidfunk/generic-linked-in-driver/blob/master/c_src/gen_driver.c
-
-UT_icd stream_sample_icd = {sizeof(stream_sample_t), NULL, NULL, NULL};
 
 typedef struct timestamped_packet {
 	uint64_t timestamp;
@@ -231,7 +228,7 @@ static inline void send_packet(audio_callback_context *context,
 	double control = 0.0;
 	double smoothed_timestamp_offset = (double)context->timestamp_offset_stats->average;
 
-	if (context->timestamp_offset_stats->c >= STREAM_SAMPLE_SIZE) {
+	if (context->timestamp_offset_stats->c > INITIAL_SAMPLE_SIZE) {
 		double time = ((double)now)/USECONDS;
 		control = pid_control(&context->pid, time, smoothed_timestamp_offset, 0.0);
 		control = MAX(control, -MAX_RESAMPLE_RATIO);
