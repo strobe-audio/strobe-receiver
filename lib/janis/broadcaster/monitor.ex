@@ -57,7 +57,7 @@ defmodule Janis.Broadcaster.Monitor do
   defp collect_measurements(%S{measurement_count: count, broadcaster: broadcaster} = state) do
     {interval, sample_size, delay} = cond do
       count == 0 -> { 50,  31, 0 }
-      true       -> { 100, 31, 10_000 }
+      true       -> { 100, 5,  2_000 }
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
     %S{ state | next_measurement_time: monotonic_milliseconds + delay + (sample_size * interval) }
@@ -104,7 +104,6 @@ defmodule Janis.Broadcaster.Monitor do
 
   defp notify_delta_change(old_delta, %S{delta: new_delta, next_measurement_time: t, delta_listeners: listeners }) do
     if old_delta != new_delta do
-      Logger.debug "Notifying time delta change..."
       notify_delta_change(new_delta, t, listeners)
     end
   end
