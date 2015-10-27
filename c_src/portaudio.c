@@ -147,6 +147,7 @@ static inline void send_packet(audio_callback_context *context,
 		memset(out+(frames*CHANNEL_COUNT), 0, (frameCount - frames) * CHANNEL_COUNT * context->sample_size);
 	}
 
+	// debug every ~1s
 	if (context->frame_count > SAMPLE_RATE) {
 		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
