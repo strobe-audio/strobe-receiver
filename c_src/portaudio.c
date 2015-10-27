@@ -2,7 +2,8 @@
 
 void playback_stopped(audio_callback_context *context) {
 	printf("Playback stopped...\r\n");
-	context->playing = false;
+	context->playing     = false;
+	context->frame_count = (uint64_t)0;
 	src_reset(context->resampler);
 	stream_stats_reset(context->timestamp_offset_stats);
 }
@@ -127,6 +128,8 @@ static inline void send_packet(audio_callback_context *context,
 
 	frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
 
+	context->frame_count += frames;
+
 	if (frames == 0) {
 		int error = src_error(context->resampler);
 		if (error != 0) {
@@ -143,8 +146,8 @@ static inline void send_packet(audio_callback_context *context,
 		playback_stopped(context);
 	}
 
-	if ((context->callback_count % 400) == 0) {
-
+	if ((context->frame_count > SAMPLE_RATE_I)) {
+		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
 		printf ("% 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.2f, %.2f, %.2f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
 	}
@@ -165,7 +168,6 @@ static int audio_callback(const void* _input,
 	UNUSED(_input);
 	UNUSED(_statusFlags);
 
-	++context->callback_count;
 
 
 	if (CONTEXT_HAS_DATA(context)) {
@@ -310,7 +312,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 	context->active_packet->offset    = 0;
 
 	// initialize stats on context
-	context->callback_count           = (uint64_t)0;
+	context->frame_count              = (uint64_t)0;
 	context->playing                  = false;
 	context->volume                   = 1.0f;
 
