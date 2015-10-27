@@ -128,6 +128,11 @@ static inline void send_packet(audio_callback_context *context,
 
 	frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
 
+
+	if (!CONTEXT_HAS_DATA(context)) {
+		playback_stopped(context);
+	}
+
 	context->frame_count += frames;
 
 	if (frames == 0) {
@@ -140,10 +145,6 @@ static inline void send_packet(audio_callback_context *context,
 	if (frames < frameCount) {
 		printf("ERROR: short frames %lu\r\n", frameCount - frames);
 		memset(out+(frames*CHANNEL_COUNT), 0, (frameCount - frames) * CHANNEL_COUNT * context->sample_size);
-	}
-
-	if (!CONTEXT_HAS_DATA(context)) {
-		playback_stopped(context);
 	}
 
 	if (context->frame_count > SAMPLE_RATE) {
