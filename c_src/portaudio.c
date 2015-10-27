@@ -406,6 +406,8 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 		goto error;
 	}
 
+	memset(context->audio_buffer_data, 0, sizeof(timestamped_packet) * BUFFER_SIZE);
+
 	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
 
 
