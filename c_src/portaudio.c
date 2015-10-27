@@ -52,7 +52,8 @@
 // There can be at most 1 buffer's worth of discrepency between the actual
 // playback position and the bytes sent to the resampler (since the resampler
 // works in buffer-sized chunks).
-#define OUTPUT_BUFFER_SIZE (8 * CHANNEL_COUNT)
+#define OUTPUT_BUFFER_FRAMES (8)
+#define OUTPUT_BUFFER_SIZE   ((OUTPUT_BUFFER_FRAMES) * (CHANNEL_COUNT))
 
 #define SECONDS_PER_FRAME  (1.0 / SAMPLE_RATE)
 #define USECONDS_PER_FRAME (USECONDS / SAMPLE_RATE)
@@ -79,7 +80,6 @@ typedef struct timestamped_packet {
 	uint64_t timestamp;
 	uint16_t len; // number of floats, not byte size
 	uint16_t offset;    // number of floats, not byte size
-	uint16_t played;    // number of floats, not byte size
 
 	float    data[PACKET_SIZE];
 } timestamped_packet;
@@ -182,7 +182,7 @@ static inline uint64_t stream_time_to_absolute_time(
 
 
 static inline uint64_t packet_output_absolute_time(timestamped_packet *packet) {
-	return packet->timestamp + (uint64_t)llround(packet->played * USECONDS_PER_FLOAT);
+	return packet->timestamp + (uint64_t)llround(packet->offset * USECONDS_PER_FLOAT);
 }
 
 // returns +ve if the packet is ahead of where it's supposed to be i.e. the audio is playing too fast
@@ -247,14 +247,6 @@ static inline void send_packet(audio_callback_context *context,
 			printf("SRC ERROR: %d '%s'\r\n", error, src_strerror(error));
 		}
 	}
-
-	// we can't know exactly how many frames from the current packet were actually
-	// played but we know that it can't be (much) more than the current packet offset
-	// if we switched packets in the middle of a callback iteration then some
-	// number of frames came from the packet before the active one.
-	// I could probably work this out exactly but i'm not sure it's worth the extra
-	// effort for at absolute most +- 1 frame of accuracy...
-	context->active_packet->played = context->active_packet->offset;
 
 	if (frames < frameCount) {
 		printf("ERROR: short frames %lu\r\n", frameCount - frames);
@@ -538,7 +530,6 @@ static ErlDrvSSizeT portaudio_drv_control(
 		uint16_t len  = le16toh(*(uint16_t *) (buf + 8));
 		struct timestamped_packet packet = {
 			.offset = 0,
-			.played = 0,
 			.timestamp = time,
 			.len = len / 2
 		};
