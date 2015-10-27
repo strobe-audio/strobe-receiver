@@ -89,7 +89,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def handle_cast({:time_delta_change, delta, next_measurement_time} = msg, %S{time_delta: time_delta} = state) do
-    Logger.debug "Time delta change, #{monotonic_milliseconds} #{inspect msg}"
+    # Logger.debug "Time delta change, #{monotonic_milliseconds} #{inspect msg}"
     {:noreply, %S{state | time_delta: Delta.update(delta, next_measurement_time, time_delta)}}
   end
 
