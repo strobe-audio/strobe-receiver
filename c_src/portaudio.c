@@ -146,7 +146,7 @@ static inline void send_packet(audio_callback_context *context,
 		playback_stopped(context);
 	}
 
-	if ((context->frame_count > SAMPLE_RATE_I)) {
+	if (context->frame_count > SAMPLE_RATE) {
 		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
 		printf ("% 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.2f, %.2f, %.2f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);

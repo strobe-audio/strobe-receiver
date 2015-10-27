@@ -45,7 +45,6 @@
 #define PACKET_SIZE   (1764) // 3528 bytes = 1,764 shorts
 #define PACKET_BUFFER_SIZE   (16)
 #define SAMPLE_RATE   (44100.0)
-#define SAMPLE_RATE_I   (44100)
 #define CHANNEL_COUNT (2)
 // the smaller this buffer is, the more accurately we can judge the playback
 // position. It's functionally impossible to know exactly how many frames from
