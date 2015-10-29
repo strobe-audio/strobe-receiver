@@ -107,9 +107,7 @@ static inline void send_packet(audio_callback_context *context,
 		context->playing = true;
 	}
 
-	unsigned long frames;
 	double resample_ratio = 1.0;
-
 
 	int64_t packet_offset = packet_output_offset_absolute_time(now, context->active_packet);
 
@@ -117,14 +115,18 @@ static inline void send_packet(audio_callback_context *context,
 	double smoothed_timestamp_offset = stream_stats_update(context->timestamp_offset_stats, packet_offset);
 
 	double control = 0.0;
+	double time    = ((double)now)/USECONDS;
 
 	control = pid_control(&context->pid, time, packet_offset, 0.0);
 	control = MAX(control, -MAX_RESAMPLE_RATIO);
 	control = MIN(control, MAX_RESAMPLE_RATIO);
 	resample_ratio = 1.0 - control;
 
-	frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
+	unsigned long frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
 
+	if (frames < frameCount) {
+		memset(out+(frames*CHANNEL_COUNT), 0, (frameCount - frames) * CHANNEL_COUNT * context->sample_size);
+	}
 
 	if (!CONTEXT_HAS_DATA(context)) {
 		playback_stopped(context);
@@ -137,11 +139,6 @@ static inline void send_packet(audio_callback_context *context,
 		if (error != 0) {
 			printf("SRC ERROR: %d '%s'\r\n", error, src_strerror(error));
 		}
-	}
-
-	if (frames < frameCount) {
-		printf("ERROR: short frames %lu\r\n", frameCount - frames);
-		memset(out+(frames*CHANNEL_COUNT), 0, (frameCount - frames) * CHANNEL_COUNT * context->sample_size);
 	}
 
 	// debug every ~1s
