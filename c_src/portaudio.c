@@ -113,10 +113,9 @@ static inline void send_packet(audio_callback_context *context,
 
 	int64_t packet_offset = packet_output_offset_absolute_time(now, context->active_packet);
 
-	stream_stats_update(context->timestamp_offset_stats, packet_offset);
+	double smoothed_timestamp_offset = stream_stats_update(context->timestamp_offset_stats, packet_offset);
 
 	double control = 0.0;
-	double smoothed_timestamp_offset = (double)context->timestamp_offset_stats->average;
 
 	if (context->timestamp_offset_stats->c > INITIAL_SAMPLE_SIZE) {
 		double time = ((double)now)/USECONDS;
@@ -307,7 +306,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 	/* pid_init(&context->pid, 6.0, 0.0, 3.0); // perhaps best? does seem to occasionally freak */
 	pid_init(&context->pid, 4.0, 0.0, 4.0);
 
-	stream_stats_init(context->timestamp_offset_stats, STREAM_STATS_WINDOW_SIZE);
+	stream_stats_init(context->timestamp_offset_stats, 0.1);
 
 	context->active_packet->timestamp = 0;
 	context->active_packet->len       = 0;
