@@ -53,7 +53,7 @@
 // There can be at most 1 buffer's worth of discrepency between the actual
 // playback position and the bytes sent to the resampler (since the resampler
 // works in buffer-sized chunks).
-#define OUTPUT_BUFFER_FRAMES (8)
+#define OUTPUT_BUFFER_FRAMES (4)
 #define OUTPUT_BUFFER_SIZE   ((OUTPUT_BUFFER_FRAMES) * (CHANNEL_COUNT))
 
 #define SECONDS_PER_FRAME  (1.0 / SAMPLE_RATE)
