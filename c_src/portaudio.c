@@ -118,13 +118,10 @@ static inline void send_packet(audio_callback_context *context,
 
 	double control = 0.0;
 
-	if (context->timestamp_offset_stats->c > INITIAL_SAMPLE_SIZE) {
-		double time = ((double)now)/USECONDS;
-		control = pid_control(&context->pid, time, packet_offset, 0.0);
-		control = MAX(control, -MAX_RESAMPLE_RATIO);
-		control = MIN(control, MAX_RESAMPLE_RATIO);
-		resample_ratio = 1.0 - control;
-	}
+	control = pid_control(&context->pid, time, packet_offset, 0.0);
+	control = MAX(control, -MAX_RESAMPLE_RATIO);
+	control = MIN(control, MAX_RESAMPLE_RATIO);
+	resample_ratio = 1.0 - control;
 
 	frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
 
