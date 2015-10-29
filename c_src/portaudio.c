@@ -299,7 +299,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	pid_init(&context->pid, 8.0, 0.0, 0.00);
 
-	stream_stats_init(context->timestamp_offset_stats, 0.0001);
+	stream_stats_init(context->timestamp_offset_stats, 0.0005);
 
 	context->active_packet->timestamp = 0;
 	context->active_packet->len       = 0;
