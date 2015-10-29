@@ -5,7 +5,7 @@
 OS=${shell uname}
 CC=gcc
 CXX=g++
-
+OPTIMIZE=-Ofast
 CFLAGS=-Wall -std=c99 -g -pedantic -Wno-comment -Wextra
 
 #echo $(ERLANG_PATH)
@@ -48,11 +48,11 @@ default: all
 all: $(TARGET_LIB)
 
 .c.o:
-	$(CC) $(CFLAGS) $(ERL_INCLUDE) $(EI_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
+	$(CC) $(CFLAGS) $(OPTIMIZE) $(ERL_INCLUDE) $(EI_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
 
 $(TARGET_LIB): $(OBJECT_FILES)
 	@echo $(ERLANG_PATH)
-	$(CC) -o $@ $^ $(ERL_INCLUDE) $(ERL_LIBS) $(EI_LIBS) $(AUDIO_LIBS) $(STD_LIBS) $(EXTRA_OPTIONS) -fPIC -O3
+	$(CC) -o $@ $^ $(ERL_INCLUDE) $(ERL_LIBS) $(EI_LIBS) $(AUDIO_LIBS) $(STD_LIBS) $(EXTRA_OPTIONS) -fPIC $(OPTIMIZE)
 
 clean:
 	rm -f  c_src/*.o priv_dir/*.so
