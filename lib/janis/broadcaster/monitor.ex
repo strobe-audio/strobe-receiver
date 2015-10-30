@@ -2,7 +2,9 @@ defmodule Janis.Broadcaster.Monitor do
   use     Monotonic
   use     GenServer
   require Logger
+
   alias   Janis.Broadcaster.Monitor.Collector
+  alias   Janis.Math.MovingAverage
 
   defmodule S do
     defstruct broadcaster: nil,
@@ -12,7 +14,8 @@ defmodule Janis.Broadcaster.Monitor do
               packet_count: 0,
               player: nil,
               delta_listeners: [],
-              next_measurement_time: nil
+              next_measurement_time: nil,
+              delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.05, 0.05)
   end
 
   @monitor_name Janis.Broadcaster.Monitor
@@ -57,7 +60,7 @@ defmodule Janis.Broadcaster.Monitor do
   defp collect_measurements(%S{measurement_count: count, broadcaster: broadcaster} = state) do
     {interval, sample_size, delay} = cond do
       count == 0 -> { 50,  31, 0 }
-      true       -> { 100, 5,  2_000 }
+      true       -> { 100, 7,  2_000 }
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
     %S{ state | next_measurement_time: monotonic_milliseconds + delay + (sample_size * interval) }
@@ -132,15 +135,12 @@ defmodule Janis.Broadcaster.Monitor do
     %S{ state | latency: max_latency }
   end
 
-  defp append_delta_measurement(new_delta, %S{delta: nil} = state) do
-    %S{ state | delta: new_delta }
-  end
-
-  defp append_delta_measurement(new_delta, %S{ delta: delta } = state) do
-    avg_delta = (new_delta + (0.9 * (delta - new_delta))) |> round
-    dd = avg_delta - delta
-    Logger.info "New time delta measurement #{delta}/#{new_delta} #{delta} -> #{avg_delta} (#{dd})"
-    %S{ state | delta: avg_delta }
+  defp append_delta_measurement(measured_delta, %S{ delta_average: avg } = state) do
+    old_delta = MovingAverage.average(avg) |> round
+    avg       = MovingAverage.update(avg, measured_delta)
+    new_delta = MovingAverage.average(avg) |> round
+    Logger.info "New time delta measurement [#{measured_delta}] - #{new_delta} (#{new_delta - old_delta}) ~ #{ Float.round(avg.b + 0.0, 3) }"
+    %S{ state | delta: new_delta, delta_average: avg }
   end
 
   defmodule Collector do
