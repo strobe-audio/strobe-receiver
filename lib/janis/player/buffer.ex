@@ -36,6 +36,9 @@ defmodule Janis.Player.Buffer do
       {current, %{state | current: current, pending: pending, time: now}}
     end
 
+    # TODO: use this line-drawing algo to spread the chagnes
+    # more evenly:
+    #   https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
     def current(%{current: current, pending: pending, d: d, time: t} = state) do
       now = monotonic_milliseconds
       dt  = now - t
