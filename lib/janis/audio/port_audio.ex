@@ -93,11 +93,14 @@ defmodule Janis.Audio.PortAudio do
     Enum.reverse packets
   end
 
-  defp split_packet_data(timestamp, data, packets) when byte_size(data) < 3528 do
-     [{timestamp, data} | packets ] |> Enum.reverse
+  defp split_packet_data(timestamp, data, packets) when byte_size(data) < @packet_size do
+    padding = :binary.copy(<<0>>, @packet_size - byte_size(data))
+    padded_data = << data::binary, padding::binary >>
+    IO.inspect byte_size(padded_data)
+    [{timestamp, padded_data} | packets ] |> Enum.reverse
   end
 
-  defp split_packet_data(timestamp, << packet_data::binary-size(3528), rest::binary >> = data, packets) when byte_size(data) >= 3528 do
+  defp split_packet_data(timestamp, << packet_data::binary-size(@packet_size), rest::binary >> = data, packets) when byte_size(data) >= @packet_size do
     next_timestamp = calculate_timestamp(timestamp, byte_size(packet_data))
     split_packet_data(next_timestamp, rest, [{timestamp, packet_data} | packets ])
   end
