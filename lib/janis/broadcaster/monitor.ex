@@ -44,7 +44,7 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   def handle_info({:start_collection, interval, sample_size}, %{broadcaster: broadcaster} = state) do
-    Collector.start_link(self, broadcaster, interval, sample_size)
+    {:ok, _pid} = Collector.start_link(self, broadcaster, interval, sample_size)
     {:noreply, state}
   end
 
@@ -92,6 +92,11 @@ defmodule Janis.Broadcaster.Monitor do
     {:noreply, append_measurement(measurement, state)}
   end
 
+  # Shutdown of collector process
+  def handle_info({:EXIT, _pid, :normal}, state) do
+    {:noreply, state}
+  end
+
   def append_measurement({new_latency, new_delta} = _measurement, %S{measurement_count: measurement_count, latency: latency, delta: delta} = state) do
     state = append_latency_measurement(new_latency, state)
     state = append_delta_measurement(new_delta, state)
@@ -99,6 +104,9 @@ defmodule Janis.Broadcaster.Monitor do
     state = %S{ state | measurement_count: measurement_count + 1 }
     state = collect_measurements(state)
     notify_delta_change(delta, state)
+    # This is a good time to clean up -- we've just emitted some packets
+    # so we have > 20 ms before this has to happen again
+    :erlang.garbage_collect(self)
     state
   end
 
@@ -155,7 +163,7 @@ defmodule Janis.Broadcaster.Monitor do
     def handle_info(:measure, %{count: count, monitor: monitor} = state) when count <= 0 do
       {latency, delta} = calculate_sync(state)
       GenServer.cast(monitor, {:append_measurement, {latency, delta}})
-      {:noreply, state}
+      {:stop, :normal, state}
     end
 
     defp measure_sync(%{measurements: measurements, count: count, broadcaster: broadcaster} = state) when count > 0  do
@@ -189,6 +197,10 @@ defmodule Janis.Broadcaster.Monitor do
 
     defp sync_exchange(broadcaster) do
       Janis.Broadcaster.SNTP.time_delta
+    end
+
+    def terminate(:normal, state) do
+      :ok
     end
 
     def terminate(reason, state) do

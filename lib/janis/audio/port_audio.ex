@@ -61,6 +61,9 @@ defmodule Janis.Audio.PortAudio do
   end
 
   defp play_packets([], state) do
+    # This is a good time to clean up -- we've just played some packets
+    # so we have > 20 ms before this has to happen again
+    :erlang.garbage_collect(self)
     state
   end
 

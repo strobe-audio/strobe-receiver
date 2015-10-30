@@ -184,6 +184,9 @@ defmodule Janis.Player.Buffer do
   end
 
   def emit_packets(state, []) do
+    # This is a good time to clean up -- we've just emitted some packets
+    # so we have > 20 ms before this has to happen again
+    :erlang.garbage_collect(self)
     state
   end
 
