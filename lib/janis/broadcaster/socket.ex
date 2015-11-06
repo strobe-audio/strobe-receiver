@@ -92,6 +92,17 @@ defmodule Janis.Broadcaster.Socket do
     {:noreply, state}
   end
 
+  def handle_cast({:event, %Event{ event: "heartbeat", topic: "phoenix" } = event}, socket) do
+    msg = Poison.encode!(%Event{event: "heartbeat", topic: "phoenix" })
+    Socket.Web.send! socket, { :text, msg }
+    {:noreply, socket}
+  end
+
+  # Heartbeat reply from Elvis
+  def handle_cast({:event, %Event{ event: "phx_reply", topic: "phoenix", payload: %{ "status" => "ok" } }}, state) do
+    {:noreply, state}
+  end
+
   def handle_cast({:event, event}, state) do
     Logger.debug "Event #{inspect event}"
     {:noreply, state}
