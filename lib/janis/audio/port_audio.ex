@@ -96,7 +96,6 @@ defmodule Janis.Audio.PortAudio do
   defp split_packet_data(timestamp, data, packets) when byte_size(data) < @packet_size do
     padding = :binary.copy(<<0>>, @packet_size - byte_size(data))
     padded_data = << data::binary, padding::binary >>
-    IO.inspect byte_size(padded_data)
     [{timestamp, padded_data} | packets ] |> Enum.reverse
   end
 
