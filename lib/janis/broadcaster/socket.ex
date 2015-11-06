@@ -43,6 +43,11 @@ defmodule Janis.Broadcaster.Socket do
       {:noreply, start_task(state)}
     end
 
+    def handle_info(msg, state) do
+      Logger.debug "Uncaught msg #{ inspect msg }"
+      {:noreply, state}
+    end
+
     defp process_event({:text, msg}, %{parent: parent} = _state) do
       event = Poison.decode! msg, as: Event
       GenServer.cast(parent, {:event, event})
