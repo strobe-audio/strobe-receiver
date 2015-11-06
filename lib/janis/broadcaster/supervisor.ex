@@ -8,10 +8,11 @@ defmodule Janis.Broadcaster.Supervisor do
   end
 
   def init({service, address, port, config}) do
+    args = [service, address, port, config]
     children = [
-      worker(Janis.Broadcaster.SNTP, [service, address, port, config], []),
-      worker(Janis.Broadcaster.Socket, [service, address, port, config], []),
-      worker(Janis.Broadcaster.Monitor, [service, address, port, config], [])
+      worker(Janis.Broadcaster.SNTP,    args, []),
+      worker(Janis.Broadcaster.Socket,  args, []),
+      worker(Janis.Broadcaster.Monitor, args, [])
     ]
     supervise(children, strategy: :one_for_all)
   end
