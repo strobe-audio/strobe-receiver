@@ -42,7 +42,6 @@ defmodule Janis.Broadcaster.Monitor do
   # def init({service, address, port, config} = broadcaster) do
   def init({service, address, port, config} = broadcaster) do
     Logger.info "Starting Broadcaster.Monitor #{inspect broadcaster}"
-    Process.flag(:trap_exit, true)
     {:ok, collect_measurements(%S{broadcaster: broadcaster})}
   end
 
@@ -93,11 +92,6 @@ defmodule Janis.Broadcaster.Monitor do
 
   def handle_cast({:append_measurement, measurement}, state) do
     {:noreply, append_measurement(measurement, state)}
-  end
-
-  # Shutdown of collector process
-  def handle_info({:EXIT, _pid, :normal}, state) do
-    {:noreply, state}
   end
 
   def append_measurement({new_latency, new_delta} = _measurement, %S{measurement_count: measurement_count, latency: latency, delta: delta} = state) do
