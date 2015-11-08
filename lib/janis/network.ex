@@ -2,6 +2,33 @@ defmodule Janis.Network do
   use Bitwise
 
   @doc """
+  Given a hostname that resolves to a set if IP address, return the best IP
+  address to use based on our list of 'sane' network interfaces
+  """
+  def lookup(hostname) do
+    {:ok, ips, _} = gethostbyname(hostname)
+    best_ip(ips, local_interfaces)
+  end
+
+  @doc ~S"""
+      iex> Janis.Network.best_ip(
+      ...>   [{192, 168, 1, 99}, {10, 0, 0, 1}],
+      ...>   [
+      ...>     {'en0', [addr: {192, 168, 1, 98}, netmask: {255, 255, 255, 0}]},
+      ...>     {'en1', [hwaddr: [0, 23, 242, 9, 32, 157]]}
+      ...>   ]
+      ...> )
+      {:ok, {192, 168, 1, 99}}
+  """
+  def best_ip(ips, ifs) do
+    {iface, ip} = ips |> Enum.map(&bind_interface(&1, ifs)) |> Enum.zip(ips) |> Enum.reject(fn
+      {:error, _} -> true
+      _ -> false
+    end) |> List.first
+    {:ok, ip}
+  end
+
+  @doc """
   Given a partciular host on the .local network, what's the best ip
   address to bind to in order to access it
   """
@@ -210,6 +237,18 @@ defmodule Janis.Network do
       end
     end
   end
+
+  @doc ~S"""
+  Converts a ipv4 address tuple into a dotted quad string
+
+      iex> Janis.Network.ntoa({123, 123, 2, 1})
+      "123.123.2.1"
+
+  """
+  def ntoa(addr) when is_tuple(addr) do
+    :inet.ntoa(addr) |> to_string
+  end
+
 
   @doc ~S"""
   Filters out VPN tap/tun interfaces plus other oddities

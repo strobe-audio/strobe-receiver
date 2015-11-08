@@ -63,14 +63,14 @@ defmodule Janis.Broadcaster.Socket do
     GenServer.cast(@name, {:join, connection})
   end
 
-  def start_link(service, address, port, config) do
-    GenServer.start_link(__MODULE__, {service, address, port, config}, name: @name)
+  def start_link(broadcaster) do
+    GenServer.start_link(__MODULE__, broadcaster, name: @name)
   end
 
-  def init({service, address, port, config} = broadcaster) do
+  def init(%Janis.Broadcaster{ip: address, port: port, config: config} = broadcaster) do
     Logger.info "Connecting to websocket #{inspect broadcaster}"
     Process.flag(:trap_exit, true)
-    %Socket.Web{} = socket = Socket.Web.connect! {address, port}, path: socket_path_with_id(config)
+    socket = Socket.Web.connect!(Janis.Network.ntoa(broadcaster.ip), broadcaster.port, path: socket_path_with_id(config))
     Poll.start_link(self, socket)
     {:ok, socket}
   end
@@ -131,7 +131,6 @@ defmodule Janis.Broadcaster.Socket do
 
   defp join_zone(%{"address" => address, "port" => port, "interval" => packet_interval, "size" => packet_size, "volume" => volume}) do
     address = List.to_tuple(address)
-    IO.inspect [:join, address, port, packet_interval, packet_size, volume]
     :ok = Janis.Audio.volume(volume)
     {:ok, pid} = Janis.Player.start_player({address, port}, {packet_interval, packet_size})
   end

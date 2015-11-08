@@ -35,12 +35,11 @@ defmodule Janis.Broadcaster.Monitor do
 
   ### GenServer API
 
-  def start_link(service, address, port, config) do
-    GenServer.start_link(__MODULE__, {service, address, port, config}, name: @monitor_name)
+  def start_link(broadcaster) do
+    GenServer.start_link(__MODULE__, broadcaster, name: @monitor_name)
   end
 
-  # def init({service, address, port, config} = broadcaster) do
-  def init({service, address, port, config} = broadcaster) do
+  def init(broadcaster) do
     Logger.info "Starting Broadcaster.Monitor #{inspect broadcaster}"
     {:ok, collect_measurements(%S{broadcaster: broadcaster})}
   end

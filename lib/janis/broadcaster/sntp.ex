@@ -5,14 +5,14 @@ defmodule Janis.Broadcaster.SNTP do
 
   @name Janis.Broadcaster.SNTP
 
-  def start_link(_service, address, port, _config) do
-    GenServer.start_link(__MODULE__, {address, port}, name: @name)
+  def start_link(broadcaster) do
+    GenServer.start_link(__MODULE__, broadcaster, name: @name)
   end
 
-  def init({address, port}) do
-    Logger.info "#{__MODULE__} initializing #{inspect {address, port}}"
+  def init(broadcaster) do
+    Logger.info "#{__MODULE__} initializing #{inspect broadcaster}"
     Process.flag(:trap_exit, true)
-    {:ok, %{broadcaster: {parse_address(address), port}, sync_count: 0}}
+    {:ok, %{broadcaster: broadcaster, sync_count: 0}}
   end
 
   def terminate(reason, state) do
@@ -44,7 +44,7 @@ defmodule Janis.Broadcaster.SNTP do
     ntp_measure(state)
   end
 
-  defp ntp_measure(%{broadcaster: {address, port} = _broadcaster, sync_count: count} = state) do
+  defp ntp_measure(%{broadcaster: broadcaster, sync_count: count} = state) do
 
     {:ok, socket} = :gen_udp.open(0, [mode: :binary, ip: {0, 0, 0, 0}, active: false])
 
@@ -53,11 +53,10 @@ defmodule Janis.Broadcaster.SNTP do
       monotonic_microseconds::size(64)-little-signed-integer
     >>
 
-    response = case :gen_udp.send(socket, address, port, packet) do
+    response = case :gen_udp.send(socket, broadcaster.ip, broadcaster.port, packet) do
       {:error, _} = err -> err
       :ok               -> wait_response(socket)
     end
-
     :gen_udp.close(socket)
     {:reply, response, %{state | sync_count: count + 1}}
   end
