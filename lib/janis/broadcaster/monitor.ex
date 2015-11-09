@@ -186,6 +186,10 @@ defmodule Janis.Broadcaster.Monitor do
       Janis.Broadcaster.SNTP.time_delta
     end
 
+    def terminate(:normal, state) do
+      :ok
+    end
+
     def terminate(reason, _state) do
       Logger.warn "Janis.Broadcaster.Monitor terminating... #{ inspect reason }"
       Janis.Player.stop_player
