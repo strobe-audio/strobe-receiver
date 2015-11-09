@@ -12,7 +12,7 @@ defmodule Janis.Broadcaster.Monitor do
               latency: 0,
               measurement_count: 0,
               packet_count: 0,
-              player: nil,
+              collector: nil,
               delta_listeners: [],
               next_measurement_time: nil,
               delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.05, 0.05)
@@ -41,12 +41,8 @@ defmodule Janis.Broadcaster.Monitor do
 
   def init(broadcaster) do
     Logger.info "Starting Broadcaster.Monitor #{inspect broadcaster}"
+    Process.flag(:trap_exit, true)
     {:ok, collect_measurements(%S{broadcaster: broadcaster})}
-  end
-
-  def handle_info({:start_collection, interval, sample_size}, %{broadcaster: broadcaster} = state) do
-    {:ok, _pid} = Collector.start_link(self, broadcaster, interval, sample_size)
-    {:noreply, state}
   end
 
   defp collect_measurements(%S{measurement_count: count} = state) do
@@ -59,6 +55,15 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   ########################################################
+
+  def handle_info({:EXIT, collector, :normal}, %S{collector: collector} = state) do
+    {:noreply, state}
+  end
+
+  def handle_info({:start_collection, interval, sample_size}, %{broadcaster: broadcaster} = state) do
+    {:ok, pid} = Collector.start_link(self, broadcaster, interval, sample_size)
+    {:noreply, %S{ state | collector: pid}}
+  end
 
   def handle_call(:get_delta, _from, %S{delta: delta} = state) do
     {:reply, {:ok, delta}, state}
@@ -130,6 +135,12 @@ defmodule Janis.Broadcaster.Monitor do
     %S{ state | delta: new_delta, delta_average: avg }
   end
 
+  def terminate(reason, _state) do
+    Logger.warn "#{__MODULE__} terminating... #{ inspect reason }"
+    Janis.Player.stop_player
+    :ok
+  end
+
   defmodule Collector do
     require Logger
 
@@ -191,8 +202,7 @@ defmodule Janis.Broadcaster.Monitor do
     end
 
     def terminate(reason, _state) do
-      Logger.warn "Janis.Broadcaster.Monitor terminating... #{ inspect reason }"
-      Janis.Player.stop_player
+      Logger.warn "#{__MODULE__} terminating... #{ inspect reason }"
       :ok
     end
   end
