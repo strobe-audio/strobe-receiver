@@ -10,19 +10,29 @@ defmodule Janis.Player.Socket do
 
   @name Janis.Player.Socket
 
-  def start_link({ip, port}, stream_info, buffer) do
-    GenServer.start_link(__MODULE__, [{ip, port}, stream_info, buffer], name: @name)
+  def start_link(address, stream_info, buffer) do
+    GenServer.start_link(__MODULE__, [address, stream_info, buffer], name: @name)
   end
 
-  def init([ {ip, port}, stream_info, buffer ]) do
-    Logger.debug "Player.Socket up #{inspect {ip, port}}"
+  def init([{broadcaster, port}, stream_info, buffer]) do
+    Logger.debug "Player.Socket up #{inspect {broadcaster, port}}"
     Process.flag(:trap_exit, true)
-    {:ok, socket} = :gen_udp.open port, [:binary, active: true, ip: ip, add_membership: {ip, {0, 0, 0, 0}}, reuseaddr: true]
-    # :ok = :gen_udp.controlling_process(socket, self)
+    {:ok, socket} = open_socket(broadcaster, port)
     {:ok, {socket, nil, buffer, stream_info}}
   end
 
-  def handle_info({:udp, __socket, __addr, __port, data}, {_socket, _time, buffer, _stream_info} = state) do
+  def open_socket(broadcaster, port) do
+    IO.inspect bind_address(broadcaster, port)
+    :enm.sub(connect: bind_address(broadcaster, port), subscribe: "", active: true)
+  end
+
+  def bind_address(broadcaster, port) do
+    IO.inspect Janis.Network.bind_address(broadcaster.ip)
+    {:ok, addr} =  Janis.Network.bind_address(broadcaster.ip)
+    "tcp://#{Janis.Network.ntoa(addr)}:#{port}"
+  end
+
+  def handle_info({:nnsub, __socket, data}, {_socket, _time, buffer, _stream_info} = state) do
     << _count::size(64)-little-unsigned-integer, timestamp::size(64)-little-signed-integer, audio::binary >> = data
     state = case {timestamp, audio} do
       {0, <<>>}  ->

@@ -21,7 +21,7 @@ defmodule Janis.Mixfile do
   #
   # Type `mix help compile.app` for more information
   def application do
-    [applications: [:logger, :monotonic, :dnssd],
+    [applications: [:logger, :monotonic, :dnssd, :enm],
      mod: {Janis, []}]
   end
 
@@ -40,6 +40,7 @@ defmodule Janis.Mixfile do
       {:poison, "~> 1.5"},
       {:poolboy, git: "https://github.com/devinus/poolboy.git"},
       {:monotonic, git: "https://github.com/magnetised/monotonic.ex.git"},
+      {:enm, github: "basho/enm" },
     ]
   end
 end
