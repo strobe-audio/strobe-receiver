@@ -72,7 +72,7 @@ defmodule Janis.Broadcaster.Socket do
     Process.flag(:trap_exit, true)
     socket = Socket.Web.connect!(Janis.Network.ntoa(broadcaster.ip), broadcaster.port, path: socket_path_with_id(broadcaster.config))
     Poll.start_link(self, socket)
-    {:ok, socket}
+    {:ok, {socket, broadcaster}}
   end
 
   def terminate(reason, _state) do
@@ -80,10 +80,10 @@ defmodule Janis.Broadcaster.Socket do
     :ok
   end
 
-  def handle_cast({:join, connection}, socket) do
+  def handle_cast({:join, connection}, {socket, _broadcaster} = state) do
     msg = Poison.encode!(event(%Event{event: "phx_join", ref: "1", payload: connection}))
     Socket.Web.send! socket, { :text, msg }
-    {:noreply, socket}
+    {:noreply, state}
   end
 
   def handle_cast({:event, %Event{event: "join_zone", payload: config} = _event}, state) do
@@ -97,10 +97,10 @@ defmodule Janis.Broadcaster.Socket do
     {:noreply, state}
   end
 
-  def handle_cast({:event, %Event{ event: "heartbeat", topic: "phoenix" } = _event}, socket) do
+  def handle_cast({:event, %Event{ event: "heartbeat", topic: "phoenix" } = _event}, {socket, _} = state) do
     msg = Poison.encode!(%Event{event: "heartbeat", topic: "phoenix" })
     Socket.Web.send! socket, { :text, msg }
-    {:noreply, socket}
+    {:noreply, state}
   end
 
   # Heartbeat reply from Elvis
