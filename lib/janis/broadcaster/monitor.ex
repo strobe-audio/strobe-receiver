@@ -15,7 +15,7 @@ defmodule Janis.Broadcaster.Monitor do
               collector: nil,
               delta_listeners: [],
               next_measurement_time: nil,
-              delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.05, 0.05)
+              delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.5, 0.5)
   end
 
   @monitor_name Janis.Broadcaster.Monitor
@@ -47,7 +47,7 @@ defmodule Janis.Broadcaster.Monitor do
 
   defp collect_measurements(%S{measurement_count: count} = state) do
     {interval, sample_size, delay} = cond do
-      count == 0 -> { 50,  31, 0 }
+      count == 0 -> { 100, 15, 0     }
       true       -> { 100, 7,  2_000 }
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
