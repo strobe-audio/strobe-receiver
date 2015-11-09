@@ -4,7 +4,7 @@ defmodule Janis.Player.Socket do
   require Logger
 
   @moduledoc """
-  Listens on a UDP multicast socket and passes all received packets onto
+  Listens on a Nanomsg SUB socket and passes all received packets onto
   a given instance of Janis.Player.Buffer.
   """
 
@@ -23,13 +23,11 @@ defmodule Janis.Player.Socket do
 
   def open_socket(broadcaster, port) do
     IO.inspect bind_address(broadcaster, port)
-    :enm.sub(connect: bind_address(broadcaster, port), subscribe: "", active: true)
+    :enm.sub(connect: bind_address(broadcaster, port), subscribe: "", active: true, nodelay: true)
   end
 
   def bind_address(broadcaster, port) do
-    IO.inspect Janis.Network.bind_address(broadcaster.ip)
-    {:ok, addr} =  Janis.Network.bind_address(broadcaster.ip)
-    "tcp://#{Janis.Network.ntoa(addr)}:#{port}"
+    "tcp://#{Janis.Network.ntoa(broadcaster.ip)}:#{port}"
   end
 
   def handle_info({:nnsub, __socket, data}, {_socket, _time, buffer, _stream_info} = state) do
