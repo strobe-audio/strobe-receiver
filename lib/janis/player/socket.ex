@@ -18,7 +18,7 @@ defmodule Janis.Player.Socket do
     Logger.debug "Player.Socket up #{inspect {broadcaster, port}}"
     Process.flag(:trap_exit, true)
     {:ok, socket} = open_socket(broadcaster, port)
-    {:ok, {socket, nil, buffer, stream_info}}
+    {:ok, {socket, 0, nil, buffer, stream_info}}
   end
 
   def open_socket(broadcaster, port) do
@@ -30,8 +30,12 @@ defmodule Janis.Player.Socket do
     "tcp://#{Janis.Network.ntoa(broadcaster.ip)}:#{port}"
   end
 
-  def handle_info({:nnsub, __socket, data}, {_socket, _time, buffer, _stream_info} = state) do
-    << _count::size(64)-little-unsigned-integer, timestamp::size(64)-little-signed-integer, audio::binary >> = data
+  def handle_info({:nnsub, __socket, data}, {_socket, count, _time, buffer, _stream_info} = state) do
+    << c::size(64)-little-unsigned-integer, timestamp::size(64)-little-signed-integer, audio::binary >> = data
+    case c - count do
+      1 -> nil
+      _ -> Logger.warn "Skipped packet #{count} #{c}"
+    end
     state = case {timestamp, audio} do
       {0, <<>>}  ->
         # Logger.debug "stp #{monotonic_milliseconds}"
@@ -41,7 +45,7 @@ defmodule Janis.Player.Socket do
         # Logger.debug "rec #{monotonic_milliseconds}"
         put({timestamp, audio}, state)
     end
-    {:noreply, state}
+    {:noreply, {_socket, c, _time, buffer, _stream_info}}
   end
 
   def handle_info(msg, state) do
@@ -54,24 +58,24 @@ defmodule Janis.Player.Socket do
     :ok
   end
 
-  defp put(packet, {_socket, nil, _buffer, _stream_info} = state) do
+  defp put(packet, state) do
     put!(packet, state)
   end
 
-  defp put({timestamp, _data} = packet, {_socket, latest_timestamp, _buffer, _stream_info} = state) when timestamp > latest_timestamp  do
+  defp put({timestamp, _data} = packet, {_socket, _count, latest_timestamp, _buffer, _stream_info} = state) when timestamp > latest_timestamp  do
     put!(packet, state)
   end
 
-  defp put({timestamp, _data}, {_socket, latest_timestamp, _buffer, _stream_info} = state) when timestamp <= latest_timestamp  do
+  defp put({timestamp, _data}, {_socket, _count, latest_timestamp, _buffer, _stream_info} = state) when timestamp <= latest_timestamp  do
     Logger.info "Ignoring packet with timestamp #{timestamp} #{timestamp - latest_timestamp}"
     state
   end
 
-  defp put!({timestamp, _data} = packet, {socket, _ts, buffer, stream_info}) do
+  defp put!({timestamp, _data} = packet, {socket, count, _ts, buffer, stream_info}) do
     Janis.Player.Buffer.put(buffer, packet)
     # This is a good time to clean up -- we've just received some packets
     # so we have > 20 ms before this has to happen again
     :erlang.garbage_collect(self)
-    {socket, timestamp, buffer, stream_info}
+    {socket, count, timestamp, buffer, stream_info}
   end
 end
