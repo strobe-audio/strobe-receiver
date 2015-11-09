@@ -40,7 +40,7 @@ defmodule Janis.Mixfile do
       {:poison, "~> 1.5"},
       {:poolboy, git: "https://github.com/devinus/poolboy.git"},
       {:monotonic, git: "https://github.com/magnetised/monotonic.ex.git"},
-      {:enm, github: "basho/enm" },
+      {:enm, git: "https://github.com/basho/enm.git" },
     ]
   end
 end
