@@ -297,7 +297,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
 
-	pid_init(&context->pid, 4.0, 0.0, 0.01);
+	pid_init(&context->pid, 6.0, 0.0, 0.01);
 
 	stream_stats_init(context->timestamp_offset_stats, 0.0005);
 
