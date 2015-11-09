@@ -14,7 +14,7 @@ defmodule Janis.DNSSD do
     {:ok, %{ref: ref}}
   end
 
-  def terminate(reason, %{ref: ref} = state) do
+  def terminate(reason, %{ref: ref} = _state) do
     Logger.warn "Terminate #{__MODULE__} #{inspect reason}"
     :dnssd.stop(ref)
     :ok

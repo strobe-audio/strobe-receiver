@@ -24,7 +24,7 @@ defmodule Janis.Broadcaster do
     stop_broadcaster(@supervisor_name, service)
   end
 
-  def stop_broadcaster(supervisor, service) do
+  def stop_broadcaster(supervisor, _service) do
     Supervisor.which_children(supervisor) |> terminate_broadcasters(supervisor)
   end
 
@@ -40,7 +40,7 @@ defmodule Janis.Broadcaster do
     terminate_broadcasters(children, supervisor)
   end
 
-  def terminate_broadcasters([], supervisor) do
+  def terminate_broadcasters([], _supervisor) do
   end
 
   def terminate_broadcaster(supervisor, broadcaster) do

@@ -49,13 +49,7 @@ defmodule Janis.Broadcaster.Monitor do
     {:noreply, state}
   end
 
-  def terminate(reason, state) do
-    Logger.info "Stopping #{__MODULE__} #{inspect reason}"
-    Janis.Player.stop_player
-    :ok
-  end
-
-  defp collect_measurements(%S{measurement_count: count, broadcaster: broadcaster} = state) do
+  defp collect_measurements(%S{measurement_count: count} = state) do
     {interval, sample_size, delay} = cond do
       count == 0 -> { 50,  31, 0 }
       true       -> { 100, 7,  2_000 }
@@ -93,7 +87,7 @@ defmodule Janis.Broadcaster.Monitor do
     {:noreply, append_measurement(measurement, state)}
   end
 
-  def append_measurement({new_latency, new_delta} = _measurement, %S{measurement_count: measurement_count, latency: latency, delta: delta} = state) do
+  def append_measurement({new_latency, new_delta} = _measurement, %S{measurement_count: measurement_count, delta: delta} = state) do
     state = append_latency_measurement(new_latency, state)
     state = append_delta_measurement(new_delta, state)
 
@@ -188,16 +182,13 @@ defmodule Janis.Broadcaster.Monitor do
       :math.sqrt(variance)
     end
 
-    defp sync_exchange(broadcaster) do
+    defp sync_exchange(_broadcaster) do
       Janis.Broadcaster.SNTP.time_delta
     end
 
-    def terminate(:normal, state) do
-      :ok
-    end
-
-    def terminate(reason, state) do
+    def terminate(reason, _state) do
       Logger.warn "Janis.Broadcaster.Monitor terminating... #{ inspect reason }"
+      Janis.Player.stop_player
       :ok
     end
   end

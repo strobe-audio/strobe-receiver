@@ -21,7 +21,7 @@ defmodule Janis.Network do
       {:ok, {192, 168, 1, 99}}
   """
   def best_ip(ips, ifs) do
-    {iface, ip} = ips |> Enum.map(&bind_interface(&1, ifs)) |> Enum.zip(ips) |> Enum.reject(fn
+    {_iface, ip} = ips |> Enum.map(&bind_interface(&1, ifs)) |> Enum.zip(ips) |> Enum.reject(fn
       {:error, _} -> true
       _ -> false
     end) |> List.first
@@ -34,7 +34,7 @@ defmodule Janis.Network do
   """
   def bind_address(host) do
     iface = bind_interface(host)
-    {ip, netmask} = ip_and_network(iface)
+    {ip, _netmask} = ip_and_network(iface)
     {:ok, ip}
   end
 
@@ -86,7 +86,7 @@ defmodule Janis.Network do
 
   """
   def bind_interface(ips, ifs) when is_list(ips) do
-    bind = ips |> Enum.map(&bind_interface(&1, ifs)) |> Enum.filter(fn
+    ips |> Enum.map(&bind_interface(&1, ifs)) |> Enum.filter(fn
       :error -> false
       _      -> true
     end) |> List.first
@@ -277,5 +277,5 @@ defmodule Janis.Network do
   for n <- ~w(tap tun gif fw) do
     def local_interface?(unquote(n) <> _id), do: false
   end
-  def local_interface?(name), do: true
+  def local_interface?(_name), do: true
 end

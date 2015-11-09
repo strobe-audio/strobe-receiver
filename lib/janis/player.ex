@@ -35,7 +35,7 @@ defmodule Janis.Player do
     terminate_players(children, supervisor)
   end
 
-  def terminate_players([], supervisor) do
+  def terminate_players([], _supervisor) do
   end
 
   def terminate_player(supervisor, player) do

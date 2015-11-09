@@ -45,7 +45,7 @@ defmodule Janis.Audio.PortAudio do
     {:reply, {:ok, volume}, state}
   end
 
-  def handle_cast({:play, {_timestamp, _data} = packet}, {port} = state) do
+  def handle_cast({:play, packet}, state) do
     state = play_packet(packet, state)
     {:noreply, state}
   end
@@ -68,7 +68,7 @@ defmodule Janis.Audio.PortAudio do
   end
 
   defp play_packets([packet | packets], {port} = state) do
-    {:ok, buffer_size} = Port.control(port, @play_command, audio_packet(packet)) |> decode_port_response
+    {:ok, _buffer_size} = Port.control(port, @play_command, audio_packet(packet)) |> decode_port_response
     # TODO: decide if we're worried about the audio buffer here.
     # case buffer_size do
     #   1 -> Logger.warn "Audio driver has low buffer #{buffer_size}"
@@ -89,7 +89,7 @@ defmodule Janis.Audio.PortAudio do
     split_packet_data(timestamp, data, [])
   end
 
-  defp split_packet_data(timestamp, <<>>, packets) do
+  defp split_packet_data(_timestamp, <<>>, packets) do
     Enum.reverse packets
   end
 

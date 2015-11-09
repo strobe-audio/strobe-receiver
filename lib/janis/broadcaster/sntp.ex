@@ -15,13 +15,9 @@ defmodule Janis.Broadcaster.SNTP do
     {:ok, %{broadcaster: broadcaster, sync_count: 0}}
   end
 
-  def terminate(reason, state) do
+  def terminate(reason, _state) do
     Logger.warn "#{__MODULE__} terminating #{inspect reason}"
     :ok
-  end
-
-  defp parse_address(addr_string) do
-    addr_string |> String.to_char_list
   end
 
   def measure_sync do
@@ -64,7 +60,7 @@ defmodule Janis.Broadcaster.SNTP do
   defp wait_response(socket) do
     :inet.setopts(socket, [active: :once])
     receive do
-      {:udp, ^socket, _addr, _port, data} -> parse_response({_addr, _port, data})
+      {:udp, ^socket, addr, port, data} -> parse_response({addr, port, data})
       # what else would we get
       msg -> {:error, msg}
     after 100 ->
@@ -78,7 +74,7 @@ defmodule Janis.Broadcaster.SNTP do
 
   defp parse_response({_addr, _port, data}) do
     now = monotonic_microseconds
-    << count::size(64)-little-unsigned-integer,
+    << _count::size(64)-little-unsigned-integer,
        originate::size(64)-little-signed-integer,
        receipt::size(64)-little-signed-integer,
        reply::size(64)-little-signed-integer

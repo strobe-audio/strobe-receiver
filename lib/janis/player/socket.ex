@@ -41,8 +41,8 @@ defmodule Janis.Player.Socket do
     {:noreply, state}
   end
 
-  def terminate(reason, state) do
-    Logger.info "Stopping #{__MODULE__}"
+  def terminate(reason, _state) do
+    Logger.info "Stopping #{__MODULE__} #{ inspect reason }"
     :ok
   end
 
@@ -54,16 +54,16 @@ defmodule Janis.Player.Socket do
     put!(packet, state)
   end
 
-  defp put({timestamp, _data} = packet, {_socket, latest_timestamp, _buffer, _stream_info} = state) when timestamp <= latest_timestamp  do
+  defp put({timestamp, _data}, {_socket, latest_timestamp, _buffer, _stream_info} = state) when timestamp <= latest_timestamp  do
     Logger.info "Ignoring packet with timestamp #{timestamp} #{timestamp - latest_timestamp}"
     state
   end
 
-  defp put!({timestamp, _data} = packet, {_socket, _ts, buffer, _stream_info} = state) do
+  defp put!({timestamp, _data} = packet, {socket, _ts, buffer, stream_info}) do
     Janis.Player.Buffer.put(buffer, packet)
     # This is a good time to clean up -- we've just received some packets
     # so we have > 20 ms before this has to happen again
     :erlang.garbage_collect(self)
-    {_socket, timestamp, buffer, _stream_info}
+    {socket, timestamp, buffer, stream_info}
   end
 end

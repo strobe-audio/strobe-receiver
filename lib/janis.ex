@@ -52,7 +52,7 @@ defmodule Janis do
     end
   end
 
-  defp id_from_if({_name, opts} = if) do
+  defp id_from_if({_name, opts} = _iface) do
     Enum.map(opts[:hwaddr], fn(b) ->
       Integer.to_string(b, 16) |> String.downcase |> String.rjust(2, ?0)
     end) |> Enum.join("-")

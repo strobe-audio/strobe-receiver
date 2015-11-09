@@ -34,12 +34,12 @@ defmodule Janis.Broadcaster.Socket do
     end
 
     # Callback from our Task
-    def handle_info({_task, event}, %{ task: task } = state) do
+    def handle_info({task, event}, %{ task: task } = state) do
       process_event(event, state)
       {:noreply, %{state | task: nil}}
     end
 
-    def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
+    def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
       {:noreply, start_task(state)}
     end
 
@@ -67,26 +67,26 @@ defmodule Janis.Broadcaster.Socket do
     GenServer.start_link(__MODULE__, broadcaster, name: @name)
   end
 
-  def init(%Janis.Broadcaster{ip: address, port: port, config: config} = broadcaster) do
+  def init(broadcaster) do
     Logger.info "Connecting to websocket #{inspect broadcaster}"
     Process.flag(:trap_exit, true)
-    socket = Socket.Web.connect!(Janis.Network.ntoa(broadcaster.ip), broadcaster.port, path: socket_path_with_id(config))
+    socket = Socket.Web.connect!(Janis.Network.ntoa(broadcaster.ip), broadcaster.port, path: socket_path_with_id(broadcaster.config))
     Poll.start_link(self, socket)
     {:ok, socket}
   end
 
-  def terminate(reason, state) do
+  def terminate(reason, _state) do
     Logger.info "Stopping #{__MODULE__} #{ inspect reason }"
     :ok
   end
 
-  def handle_cast({:join, %{latency: latency} = connection}, socket) do
+  def handle_cast({:join, connection}, socket) do
     msg = Poison.encode!(event(%Event{event: "phx_join", ref: "1", payload: connection}))
     Socket.Web.send! socket, { :text, msg }
     {:noreply, socket}
   end
 
-  def handle_cast({:event, %Event{event: "join_zone", payload: config} = event}, state) do
+  def handle_cast({:event, %Event{event: "join_zone", payload: config} = _event}, state) do
     Logger.debug "JOIN ZONE #{inspect config}"
     join_zone(config)
     {:noreply, state}
@@ -97,7 +97,7 @@ defmodule Janis.Broadcaster.Socket do
     {:noreply, state}
   end
 
-  def handle_cast({:event, %Event{ event: "heartbeat", topic: "phoenix" } = event}, socket) do
+  def handle_cast({:event, %Event{ event: "heartbeat", topic: "phoenix" } = _event}, socket) do
     msg = Poison.encode!(%Event{event: "heartbeat", topic: "phoenix" })
     Socket.Web.send! socket, { :text, msg }
     {:noreply, socket}
@@ -132,7 +132,7 @@ defmodule Janis.Broadcaster.Socket do
   defp join_zone(%{"address" => address, "port" => port, "interval" => packet_interval, "size" => packet_size, "volume" => volume}) do
     address = List.to_tuple(address)
     :ok = Janis.Audio.volume(volume)
-    {:ok, pid} = Janis.Player.start_player({address, port}, {packet_interval, packet_size})
+    {:ok, _pid} = Janis.Player.start_player({address, port}, {packet_interval, packet_size})
   end
 
   # Handle missing volume param

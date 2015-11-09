@@ -17,7 +17,7 @@ defmodule Janis.Player.Buffer do
       %{current: current_delta, pending: 0, d: 0, time: 0}
     end
 
-    def update(new_delta, next_measurement_time, %{current: current, pending: pending} = state) do
+    def update(new_delta, next_measurement_time, %{current: current, pending: pending} = _state) do
       diff = new_delta - (current + pending)
       t = next_measurement_time - monotonic_milliseconds
       d = (diff / t)
@@ -91,7 +91,7 @@ defmodule Janis.Player.Buffer do
     {:noreply, %S{ state | time_delta: Delta.new(delta) }}
   end
 
-  def handle_cast({:time_delta_change, delta, next_measurement_time} = msg, %S{time_delta: time_delta} = state) do
+  def handle_cast({:time_delta_change, delta, next_measurement_time} = _msg, %S{time_delta: time_delta} = state) do
     # Logger.debug "Time delta change, #{monotonic_milliseconds} #{inspect msg}"
     {:noreply, %S{state | time_delta: Delta.update(delta, next_measurement_time, time_delta)}}
   end
@@ -101,7 +101,7 @@ defmodule Janis.Player.Buffer do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, _monitor, :process, _channel, reason}, state) do
+  def handle_info({:DOWN, _monitor, :process, _channel, _reason}, state) do
     # Logger.debug "Emitter down"
     {:noreply, state}
   end
@@ -125,7 +125,7 @@ defmodule Janis.Player.Buffer do
     put_packet(packet, %S{state | status: :playing, interval_timer: tref})
   end
 
-  def put_packet(packet, %S{status: :playing, queue: queue, stream_info: {interval_ms, _size}, count: count} = state) do
+  def put_packet(packet, %S{status: :playing, queue: queue, count: count} = state) do
     {translated_packet, state} = translate_packet(packet, state)
     queue  = cons(translated_packet, queue, count)
     %S{ state | queue: queue, count: count + 1 }
@@ -204,15 +204,15 @@ defmodule Janis.Player.Buffer do
     state
   end
 
-  def monitor_queue_length(queue, count) do
+  def monitor_queue_length(queue, _count) do
     case :queue.len(queue) do
       l when l > 20 ->
         Logger.warn "Overflow buffer! #{inspect (l + 1)}"
       l when l == 0 ->
         Logger.warn "Empty buffer!"
-      l when l < 2 ->
+      l when l < 4 ->
         Logger.warn "Low buffer #{l}"
-      l ->
+      _ ->
     end
     queue
   end
