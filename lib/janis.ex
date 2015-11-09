@@ -6,7 +6,6 @@ defmodule Janis do
   @sample_channels    Application.get_env(:janis, :sample_channels, 2)
 
   def start(_type, _args) do
-    IO.inspect [:Janis, :start]
     Janis.Supervisor.start_link
   end
 
