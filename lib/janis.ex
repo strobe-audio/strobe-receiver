@@ -31,29 +31,48 @@ defmodule Janis do
     List.first(valid_ifs(ifs)) |> id_from_if
   end
 
-  defp valid_ifs(ifs) do
+  def valid_ifs do
+    {:ok, ifs} = :inet.getifaddrs
+    valid_ifs(ifs)
+  end
+
+  def valid_ifs(ifs) do
     Enum.filter ifs, fn({_name, opts}) ->
       valid_if_flags?(opts) && valid_if_addrs?(opts)
     end
   end
 
-  @required_if_flags Enum.into([:up, :broadcast, :running, :multicast], HashSet.new)
-  @invalid_if_flags  Enum.into([:loopback, :pointtopoint], HashSet.new)
+  @required_if_flags Enum.into([:up, :running, :multicast], HashSet.new)
+  @invalid_if_flags  Enum.into([:pointtopoint], HashSet.new)
 
-  defp valid_if_flags?(opts) do
+  def valid_if_flags?(opts) do
     flags = Enum.into(opts[:flags], HashSet.new)
     Set.subset?(@required_if_flags, flags) && Set.disjoint?(@invalid_if_flags, flags)
   end
 
-  defp valid_if_addrs?(opts) do
-    Enum.all? [:addr, :netmask, :broadaddr], fn(key) ->
+  def valid_if_addrs?(opts) do
+    Enum.all? [:addr, :netmask], fn(key) ->
       Keyword.has_key?(opts, key)
     end
   end
 
-  defp id_from_if({_name, opts} = _iface) do
-    Enum.map(opts[:hwaddr], fn(b) ->
+  def id_from_if({_name, opts} = iface) do
+    Enum.map(hwaddr(iface), fn(b) ->
       Integer.to_string(b, 16) |> String.downcase |> String.rjust(2, ?0)
     end) |> Enum.join("-")
+  end
+
+  def id_from_if(iface) do
+    Logger.warn "No interface id calculated for #{ inspect iface }"
+    :error
+  end
+
+  # Give the loopback device a valid mac address
+  def hwaddr({'lo' ++ _, opts}) do
+    [0, 0, 0, 0, 0, 0]
+  end
+
+  def hwaddr({_name, opts}) do
+    opts[:hwaddr]
   end
 end
