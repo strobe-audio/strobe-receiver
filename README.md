@@ -51,6 +51,20 @@ Exactly the best way to do this is a WIP but as a working solution:
 - `/usr/bin/amixer -c 0 sset "Auto Mute" Disabled` - not sure this does anything
 - `sudo alsactl store` save the settings
 
+Other DACS:
+
+- https://polyvection.com/ very low-cost DACs:
+  - https://polyvection.com/support/plain-series/comparison-chart/ - PlainDAC would be adequate - that's only ~ E10
+  - https://polyvection.com/shop/plaindac/
+  - All support Pi2 natively + Beaglebone black (with kernel mods)
+
+Possible alternate computers
+----------------------------
+
+- Beaglebone black:
+  - https://hifiduino.wordpress.com/2014/03/10/beaglebone-black-for-audio/
+  - http://beagleboard.org/black
+
 TODO
 ----
 
