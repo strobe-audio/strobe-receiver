@@ -145,7 +145,7 @@ static inline void send_packet(audio_callback_context *context,
 	if (context->frame_count > SAMPLE_RATE) {
 		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
-		printf ("% 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.2f, %.2f, %.2f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
+		printf ("> % 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.2f, %.2f, %.2f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
 	}
 
 }
@@ -165,12 +165,21 @@ static int audio_callback(const void* _input,
 	UNUSED(_statusFlags);
 
 
-
-	if (CONTEXT_HAS_DATA(context)) {
-		packet = context->active_packet;
+	if (context->stopped) {
+		// remove all things from the ring buffer
+		timestamped_packet _packet;
+		while (PaUtil_GetRingBufferReadAvailable(&context->audio_buffer) > 0) {
+			PaUtil_ReadRingBuffer(&context->audio_buffer, &_packet, 1);
+		}
+		playback_stopped(context);
+		context->stopped = false;
 	} else {
-		if (load_next_packet(context)) {
+		if (CONTEXT_HAS_DATA(context)) {
 			packet = context->active_packet;
+		} else {
+			if (load_next_packet(context)) {
+				packet = context->active_packet;
+			}
 		}
 	}
 	if (packet == NULL) {
@@ -308,6 +317,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 	// initialize stats on context
 	context->frame_count              = (uint64_t)0;
 	context->playing                  = false;
+	context->stopped                  = false;
 	context->volume                   = 1.0f;
 
 	PaUtil_InitializeRingBuffer(&context->audio_buffer, sizeof(timestamped_packet), PACKET_BUFFER_SIZE, context->audio_buffer_data);
@@ -410,18 +420,20 @@ static ErlDrvSSizeT portaudio_drv_control(
 	audio_callback_context *context = state->audio_context;
 
 	if (cmd == PLAY_COMMAND) {
-		uint64_t time = le64toh(*(uint64_t *) buf);
-		uint16_t len  = le16toh(*(uint16_t *) (buf + 8));
-		struct timestamped_packet packet = {
-			.offset = 0,
-			.timestamp = time,
-			.len = len / 2
-		};
+		if (!context->stopped) {
+			uint64_t time = le64toh(*(uint64_t *) buf);
+			uint16_t len  = le16toh(*(uint16_t *) (buf + 8));
+			struct timestamped_packet packet = {
+				.offset = 0,
+				.timestamp = time,
+				.len = len / 2
+			};
 
-		// conversion to float needed by libsamplerate
-		short_to_float_array((short*)(buf + 10), packet.data, context->volume, packet.len);
+			// conversion to float needed by libsamplerate
+			short_to_float_array((short*)(buf + 10), packet.data, context->volume, packet.len);
 
-		PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
+			PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
+		}
 
 		long buffer_size = PaUtil_GetRingBufferReadAvailable(&context->audio_buffer);
 
@@ -438,6 +450,9 @@ static ErlDrvSSizeT portaudio_drv_control(
 	} else if (cmd == SVOL_COMMAND) {
 		float volume = *((float *)buf);
 		context->volume = MAX(MIN(volume, 1.0), 0.0);
+		ei_encode_atom(*rbuf, &index, "ok");
+	} else if (cmd == STOP_COMMAND) {
+		context->stopped = true;
 		ei_encode_atom(*rbuf, &index, "ok");
 	}
 	return (ErlDrvSSizeT)index;

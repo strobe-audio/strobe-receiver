@@ -31,7 +31,7 @@ defmodule Janis.Audio.PortAudio do
 
   @play_command 1
   @time_command 2
-  @flsh_command 3
+  @stop_command 3
   @gvol_command 4
   @svol_command 5
 
@@ -53,6 +53,12 @@ defmodule Janis.Audio.PortAudio do
   def handle_cast({:set_volume, volume}, {port} = state) do
     Logger.debug "Set volume #{volume}"
     :ok = Port.control(port, @svol_command, <<volume::size(32)-native-float>>) |> decode_port_response
+    {:noreply, state}
+  end
+
+  def handle_cast(:stop, {port} = state) do
+    Logger.info "Stop"
+    :ok = Port.control(port, @stop_command, <<>>) |> decode_port_response
     {:noreply, state}
   end
 

@@ -10,6 +10,8 @@ defmodule Janis.Player.Socket do
 
   @name Janis.Player.Socket
 
+  @stop_command << "STOP" >>
+
   def start_link(address, stream_info, buffer) do
     GenServer.start_link(__MODULE__, [address, stream_info, buffer], name: @name)
   end
@@ -30,21 +32,23 @@ defmodule Janis.Player.Socket do
     "tcp://#{Janis.Network.ntoa(broadcaster.ip)}:#{port}"
   end
 
+  def handle_info({:nnsub, __socket, @stop_command}, {_socket, _count, _time, buffer, _stream_info} = state) do
+    Janis.Player.Buffer.stop(buffer)
+    {:noreply, state}
+  end
+
   def handle_info({:nnsub, __socket, data}, {_socket, count, _time, buffer, _stream_info} = state) do
-    << c::size(64)-little-unsigned-integer, timestamp::size(64)-little-signed-integer, audio::binary >> = data
+    <<
+      c         ::size(64)-little-unsigned-integer,
+      timestamp ::size(64)-little-signed-integer,
+      audio     ::binary
+    >> = data
+
     case c - count do
       1 -> nil
       _ -> Logger.warn "Skipped packet #{count} #{c}"
     end
-    state = case {timestamp, audio} do
-      {0, <<>>}  ->
-        # Logger.debug "stp #{monotonic_milliseconds}"
-        Janis.Player.Buffer.stop(buffer)
-        state
-      _ ->
-        # Logger.debug "rec #{monotonic_milliseconds}"
-        put({timestamp, audio}, state)
-    end
+    state = put({timestamp, audio}, state)
     {:noreply, {_socket, c, _time, buffer, _stream_info}}
   end
 

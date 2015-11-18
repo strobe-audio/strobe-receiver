@@ -24,4 +24,9 @@ defmodule Janis.Audio do
   def time do
     GenServer.call(@name, :time)
   end
+
+  @doc "Stops the audio immediately & flushes the buffers"
+  def stop do
+    GenServer.cast(@name, :stop)
+  end
 end

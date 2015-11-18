@@ -97,13 +97,13 @@ defmodule Janis.Player.Buffer do
   end
 
   def handle_cast(:stop, state) do
+    # This isn't necessary - the audio driver only has a
+    # very few audio packets in its buffer at any one time
+    # so we can let it just play itself out without the music
+    # appearing to play on after we've hit stop.
+    # Janis.Audio.stop
     Logger.info "Buffer stopped..."
-    {:noreply, state}
-  end
-
-  def handle_info({:DOWN, _monitor, :process, _channel, _reason}, state) do
-    # Logger.debug "Emitter down"
-    {:noreply, state}
+    {:noreply, %S{state | status: :stopped, queue: :queue.new}}
   end
 
   def handle_info(:check_emit, state) do
@@ -127,6 +127,12 @@ defmodule Janis.Player.Buffer do
 
   def put_packet(packet, %S{status: :playing, queue: queue, count: count} = state) do
     {translated_packet, state} = translate_packet(packet, state)
+    { timestamp, _ } = translated_packet
+    case timestamp - monotonic_microseconds do
+      x when x <= 0 ->
+        Logger.warn "Late packet #{x} µs"
+      _ -> nil
+    end
     queue  = cons(translated_packet, queue, count)
     %S{ state | queue: queue, count: count + 1 }
   end

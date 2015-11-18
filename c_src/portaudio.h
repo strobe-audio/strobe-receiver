@@ -37,7 +37,7 @@
 
 #define PLAY_COMMAND  (1)
 #define TIME_COMMAND  (2)
-#define FLSH_COMMAND  (3)
+#define STOP_COMMAND  (3)
 #define GVOL_COMMAND  (4)
 #define SVOL_COMMAND  (5)
 
@@ -95,6 +95,7 @@ typedef struct audio_callback_context {
 	PaTime              latency;
 
 	bool                playing;
+	bool                stopped;
 
 	stream_statistics_t  *timestamp_offset_stats;
 
