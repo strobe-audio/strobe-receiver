@@ -75,11 +75,11 @@ defmodule Janis.Player.Socket do
     state
   end
 
-  defp put!({timestamp, _data} = packet, {socket, count, _ts, buffer, stream_info}) do
+  defp put!(packet, {_socket, _count, _ts, buffer, _stream_info} = state) do
     Janis.Player.Buffer.put(buffer, packet)
     # This is a good time to clean up -- we've just received some packets
     # so we have > 20 ms before this has to happen again
     :erlang.garbage_collect(self)
-    {socket, count, timestamp, buffer, stream_info}
+    state
   end
 end
