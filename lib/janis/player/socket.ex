@@ -32,9 +32,9 @@ defmodule Janis.Player.Socket do
     "tcp://#{Janis.Network.ntoa(broadcaster.ip)}:#{port}"
   end
 
-  def handle_info({:nnsub, __socket, @stop_command}, {_socket, _count, _time, buffer, _stream_info} = state) do
+  def handle_info({:nnsub, __socket, @stop_command}, {socket, count, time, buffer, stream_info} = _state) do
     Janis.Player.Buffer.stop(buffer)
-    {:noreply, state}
+    {:noreply, {socket, 0, nil, buffer, stream_info}}
   end
 
   def handle_info({:nnsub, __socket, data}, {_socket, count, _time, buffer, _stream_info} = state) do
