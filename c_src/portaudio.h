@@ -43,7 +43,7 @@
 
 #define USECONDS      (1000000.0)
 #define PACKET_SIZE   (1764) // 3528 bytes = 1,764 shorts
-#define PACKET_BUFFER_SIZE   (16)
+#define PACKET_BUFFER_SIZE   (32)
 #define SAMPLE_RATE   (44100.0)
 #define CHANNEL_COUNT (2)
 // the smaller this buffer is, the more accurately we can judge the playback
