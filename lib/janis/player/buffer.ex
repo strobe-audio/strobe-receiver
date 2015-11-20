@@ -201,7 +201,6 @@ defmodule Janis.Player.Buffer do
   end
 
   def emit_packet(state, packet) do
-    # Logger.debug "emt #{monotonic_microseconds}"
     Janis.Audio.play(packet)
     state
   end
