@@ -118,7 +118,9 @@ defmodule Janis.Player.Buffer do
 
   def put_packet(packet, %S{status: :stopped} = state) do
     {:ok, tref} = :timer.send_interval(check_emit_interval(state), :check_emit)
-    put_packet(packet, %S{state | status: :playing, interval_timer: tref})
+    # Because our check interval may be higher than the gap between now & the
+    # first packet, we test for emission (?) when receiving the first packets
+    put_packet(packet, %S{state | status: :playing, interval_timer: tref}) |> maybe_emit_packets
   end
 
   def put_packet(packet, %S{status: :playing, queue: queue, count: count} = state) do
