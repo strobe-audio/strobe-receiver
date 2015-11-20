@@ -37,19 +37,14 @@ defmodule Janis.Player.Socket do
     {:noreply, {socket, 0, nil, buffer, stream_info}}
   end
 
-  def handle_info({:nnsub, __socket, data}, {_socket, count, _time, buffer, _stream_info} = state) do
-    <<
-      c         ::size(64)-little-unsigned-integer,
-      timestamp ::size(64)-little-signed-integer,
-      audio     ::binary
+  def handle_info({:nnsub, __socket, data}, state) do
+    << c         ::size(64)-little-unsigned-integer,
+       timestamp ::size(64)-little-signed-integer,
+       audio     ::binary
     >> = data
 
-    case c - count do
-      1 -> nil
-      _ -> Logger.warn "Skipped packet #{count} #{c}"
-    end
-    state = put({timestamp, audio}, state)
-    {:noreply, {_socket, c, _time, buffer, _stream_info}}
+    put({timestamp, audio}, state)
+    {:noreply, state}
   end
 
   def handle_info(msg, state) do
