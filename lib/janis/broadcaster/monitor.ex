@@ -15,7 +15,7 @@ defmodule Janis.Broadcaster.Monitor do
               collector: nil,
               delta_listeners: [],
               next_measurement_time: nil,
-              delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.5, 0.5)
+              delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.1, 0.05)
   end
 
   @monitor_name Janis.Broadcaster.Monitor
