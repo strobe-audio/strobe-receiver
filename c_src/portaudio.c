@@ -169,9 +169,9 @@ static int audio_callback(const void* _input,
 		// remove all things from the ring buffer
 		timestamped_packet _packet;
 		while (PaUtil_GetRingBufferReadAvailable(&context->audio_buffer) > 0) {
+			printf("Popping %d\n\r", PaUtil_GetRingBufferReadAvailable(&context->audio_buffer));
 			PaUtil_ReadRingBuffer(&context->audio_buffer, &_packet, 1);
 		}
-		playback_stopped(context);
 		context->stopped = false;
 	} else {
 		if (CONTEXT_HAS_DATA(context)) {
