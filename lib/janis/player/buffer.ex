@@ -208,13 +208,14 @@ defmodule Janis.Player.Buffer do
 
   def monitor_queue_length(queue, _count) do
     case :queue.len(queue) do
-      l when l > 20 ->
+      l when l > 50 ->
         Logger.warn "Overflow buffer! #{inspect (l + 1)}"
       l when l == 0 ->
         Logger.warn "Empty buffer!"
       l when l < 4 ->
         Logger.warn "Low buffer #{l}"
-      _ ->
+      l ->
+        # Logger.debug "q: #{l}"
     end
     queue
   end
