@@ -97,11 +97,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def handle_cast(:stop, state) do
-    # This isn't necessary - the audio driver only has a
-    # very few audio packets in its buffer at any one time
-    # so we can let it just play itself out without the music
-    # appearing to play on after we've hit stop.
-    # Janis.Audio.stop
+    Janis.Audio.stop
     Logger.info "Buffer stopped..."
     {:noreply, %S{state | status: :stopped, queue: :queue.new}}
   end
