@@ -51,7 +51,7 @@ defmodule Janis do
   end
 
   def valid_if_addrs?(opts) do
-    Enum.all? [:hwaddr], fn(key) ->
+    Enum.all? [:addr, :netmask, :hwaddr], fn(key) ->
       Keyword.has_key?(opts, key)
     end
   end
