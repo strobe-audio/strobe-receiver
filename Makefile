@@ -1,5 +1,5 @@
 
-.PHONY: clean
+.PHONY: clean directories
 .SUFFIXES: .o .c
 
 OS=${shell uname}
@@ -28,9 +28,11 @@ STD_LIBS      = -lm
 HEADER_FILES = c_src
 SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c c_src/monotonic_time.c c_src/stream_statistics.c c_src/pid.c
 
+MKDIR_P      = mkdir -p
 OBJECT_FILES = $(SOURCE_FILES:.c=.o)
+PRIV_DIR     = priv_dir
+TARGET_LIB   = $(PRIV_DIR)/portaudio.so
 
-TARGET_LIB = priv_dir/portaudio.so
 
 ifeq ($(OS), Darwin)
 	EXTRA_OPTIONS = -fno-common -bundle -undefined suppress -flat_namespace
@@ -45,7 +47,7 @@ endif
 
 default: all
 
-all: $(TARGET_LIB)
+all: directories $(TARGET_LIB)
 
 .c.o:
 	$(CC) $(CFLAGS) $(OPTIMIZE) $(ERL_INCLUDE) $(EI_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
@@ -53,6 +55,13 @@ all: $(TARGET_LIB)
 $(TARGET_LIB): $(OBJECT_FILES)
 	@echo $(ERLANG_PATH)
 	$(CC) -o $@ $^ $(ERL_INCLUDE) $(ERL_LIBS) $(EI_LIBS) $(AUDIO_LIBS) $(STD_LIBS) $(EXTRA_OPTIONS) -fPIC $(OPTIMIZE)
+
+program: $(OBJECT_FILES)
+
+directories: $(PRIV_DIR)
+
+${PRIV_DIR}:
+	${MKDIR_P} ${PRIV_DIR}
 
 clean:
 	rm -f  c_src/*.o priv_dir/*.so
