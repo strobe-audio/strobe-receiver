@@ -5,6 +5,8 @@ defmodule Janis do
   @sample_bits        Application.get_env(:janis, :sample_bits, 16)
   @sample_channels    Application.get_env(:janis, :sample_channels, 2)
 
+  @uuid_namespace     "39cd3e2a-b9ce-4e12-ba7a-d6f828cac1b3"
+
   def start(_type, _args) do
     Janis.Supervisor.start_link
   end
@@ -24,7 +26,7 @@ defmodule Janis do
   end
 
   def receiver_id do
-    id_from_ifs(:inet.getifaddrs)
+    UUID.uuid5(@uuid_namespace, id_from_ifs(:inet.getifaddrs))
   end
 
   defp id_from_ifs({:ok, ifs}) do

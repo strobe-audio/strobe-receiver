@@ -36,6 +36,7 @@ defmodule Janis.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     [ {:socket, "~> 0.3.0"},
+      {:uuid, "~> 1.1"},
       {:dnssd, git: "https://github.com/benoitc/dnssd_erlang.git"},
       {:poison, "~> 1.5"},
       {:poolboy, git: "https://github.com/devinus/poolboy.git"},
