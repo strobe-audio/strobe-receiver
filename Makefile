@@ -6,7 +6,7 @@ OS=${shell uname}
 CC=gcc
 CXX=g++
 OPTIMIZE=-Ofast
-CFLAGS=-Wall -std=c99 -g -pedantic -Wno-comment -Wextra -fPIC
+CFLAGS=-Wall -std=c99 -g -pedantic -Wno-comment -Wextra -fPIC -march=native
 
 #echo $(ERLANG_PATH)
 # Erlang
