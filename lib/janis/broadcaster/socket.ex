@@ -34,7 +34,7 @@ defmodule Janis.Broadcaster.Socket do
     end
 
     # Callback from our Task
-    def handle_info({task, event}, state) do
+    def handle_info({_task, event}, state) do
       process_event(event, state)
       {:noreply, %{state | task: nil}}
     end

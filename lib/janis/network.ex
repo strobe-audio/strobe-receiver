@@ -180,14 +180,14 @@ defmodule Janis.Network do
 
   """
   def ip_and_network({_name, params} = _if) do
-    ip = params |> Enum.filter fn
+    ip = params |> Enum.filter(fn
       {:addr, addr} -> ip_v4?(addr)
       _ -> false
-    end
-    net = params |> Enum.filter fn
+    end)
+    net = params |> Enum.filter(fn
       {:netmask, mask} -> ip_v4?(mask)
       _ -> false
-    end
+    end)
     case {ip, net} do
       {[], []} -> :error
       {[{:addr, ip}], [{:netmask, net}]} -> {ip, net}
@@ -226,16 +226,16 @@ defmodule Janis.Network do
 
   """
   def local_interfaces(ifs \\ interfaces) do
-    ifs |> Enum.filter &local_interface?/1
+    ifs |> Enum.filter(&local_interface?/1)
   end
 
   def interfaces_with_ip(ifs \\ interfaces) do
-    ifs |> Enum.filter fn({_name, attrs}) ->
-      attrs |> Enum.any? fn
+    ifs |> Enum.filter(fn({_name, attrs}) ->
+      attrs |> Enum.any?(fn
         {:addr, _addr} -> true
         _ -> false
-      end
-    end
+      end)
+    end)
   end
 
   @doc ~S"""

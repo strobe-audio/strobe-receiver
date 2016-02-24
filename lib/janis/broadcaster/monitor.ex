@@ -197,7 +197,7 @@ defmodule Janis.Broadcaster.Monitor do
       Janis.Broadcaster.SNTP.time_delta
     end
 
-    def terminate(:normal, state) do
+    def terminate(:normal, _state) do
       :ok
     end
 

@@ -215,7 +215,7 @@ defmodule Janis.Player.Buffer do
         Logger.warn "Empty buffer!"
       l when l < 4 ->
         Logger.warn "Low buffer #{l}"
-      l ->
+      _ -> nil
         # Logger.debug "q: #{l}"
     end
     queue
