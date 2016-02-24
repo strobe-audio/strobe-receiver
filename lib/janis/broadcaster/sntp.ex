@@ -21,7 +21,7 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   def measure_sync do
-    GenServer.call(@name, :measure_sync)
+    GenServer.call(@name, :measure_sync, 2000)
   end
 
   def time_delta do
