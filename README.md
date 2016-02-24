@@ -24,9 +24,13 @@ Dependencies
 
      sudo apt-get install -y portaudio19-dev
 
+     brew install portaudio
+
 - `libsamplerate`:
 
      sudo apt-get install -y libsamplerate0 libsamplerate0-dev
+
+     brew install libsamplerate
 
 Running
 ------
