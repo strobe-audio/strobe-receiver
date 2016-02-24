@@ -47,8 +47,8 @@ defmodule Janis.Broadcaster.Monitor do
 
   defp collect_measurements(%S{measurement_count: count} = state) do
     {interval, sample_size, delay} = cond do
-      count == 0 -> { 100, 15, 0     }
-      true       -> { 100, 7,  2_000 }
+      count == 0 -> { 100, 1, 0     }
+      true       -> { 100, 1,  1_000 }
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
     %S{ state | next_measurement_time: monotonic_milliseconds + delay + (sample_size * interval) }
