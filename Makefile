@@ -16,8 +16,8 @@ ERLANG_PATH = $(shell erl -eval 'io:format("~s", [lists:concat([code:root_dir(),
 ERL_INCLUDE = -I$(ERLANG_PATH)/include
 ERL_LIBS    = -L$(ERLANG_PATH)/lib \
 							-lerts
-EI_INCLUDE  = -I$(ERLANG_PATH)/../lib/erl_interface-3.8/include
-EI_LIBS     = -L$(ERLANG_PATH)/../lib/erl_interface-3.8/lib \
+EI_INCLUDE  = -I$(ERLANG_PATH)/../usr/include
+EI_LIBS     = -L$(ERLANG_PATH)/../usr/lib \
 							-lei \
 							-lerl_interface
 AUDIO_INCLUDE = -I/usr/local/include -I/usr/include
