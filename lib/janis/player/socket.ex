@@ -32,13 +32,13 @@ defmodule Janis.Player.Socket do
     "tcp://#{Janis.Network.ntoa(broadcaster.ip)}:#{port}"
   end
 
-  def handle_info({:nnsub, __socket, @stop_command}, {socket, count, time, buffer, stream_info} = _state) do
+  def handle_info({:nnsub, __socket, @stop_command}, {socket, _count, _time, buffer, stream_info} = _state) do
     Janis.Player.Buffer.stop(buffer)
     {:noreply, {socket, 0, nil, buffer, stream_info}}
   end
 
   def handle_info({:nnsub, __socket, data}, state) do
-    << c         ::size(64)-little-unsigned-integer,
+    << _c        ::size(64)-little-unsigned-integer,
        timestamp ::size(64)-little-signed-integer,
        audio     ::binary
     >> = data
@@ -55,10 +55,6 @@ defmodule Janis.Player.Socket do
   def terminate(reason, _state) do
     Logger.info "Stopping #{__MODULE__} #{ inspect reason }"
     :ok
-  end
-
-  defp put(packet, state) do
-    put!(packet, state)
   end
 
   defp put({timestamp, _data} = packet, {_socket, _count, latest_timestamp, _buffer, _stream_info} = state) when timestamp > latest_timestamp  do

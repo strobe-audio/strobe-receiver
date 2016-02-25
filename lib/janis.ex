@@ -58,7 +58,7 @@ defmodule Janis do
     end
   end
 
-  def id_from_if({_name, opts} = iface) do
+  def id_from_if({_name, _opts} = iface) do
     Enum.map(hwaddr(iface), fn(b) ->
       Integer.to_string(b, 16) |> String.downcase |> String.rjust(2, ?0)
     end) |> Enum.join("-")
@@ -70,7 +70,7 @@ defmodule Janis do
   end
 
   # Give the loopback device a valid mac address
-  def hwaddr({'lo' ++ _, opts}) do
+  def hwaddr({'lo' ++ _, _opts}) do
     [0, 0, 0, 0, 0, 0]
   end
 
