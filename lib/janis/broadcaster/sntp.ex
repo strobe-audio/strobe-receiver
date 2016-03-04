@@ -1,4 +1,8 @@
 defmodule Janis.Broadcaster.SNTP do
+  @moduledoc ~S"""
+  An SNTP client.
+  """
+
   use     GenServer
   use     Monotonic
   require Logger
@@ -37,7 +41,8 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   def handle_call(:measure_sync, _from, state) do
-    ntp_measure(state)
+    {response, state} = state |> ntp_measure
+    {:reply, response, state}
   end
 
   defp ntp_measure(%{broadcaster: broadcaster, sync_count: count} = state) do
@@ -54,7 +59,7 @@ defmodule Janis.Broadcaster.SNTP do
       :ok               -> wait_response(socket)
     end
     :gen_udp.close(socket)
-    {:reply, response, %{state | sync_count: count + 1}}
+    {response, %{state | sync_count: count + 1}}
   end
 
   defp wait_response(socket) do
