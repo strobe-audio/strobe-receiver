@@ -8,7 +8,8 @@ defmodule Janis.Player.Supervisor do
   def init({broadcaster, latency}) do
     children = [
       worker(Janis.Player.Buffer, [broadcaster, Janis.Player.Buffer]),
-      worker(Janis.Player.Socket, [broadcaster, latency, Janis.Player.Buffer]),
+      worker(Janis.Player.Socket.Data, [broadcaster, latency, Janis.Player.Buffer]),
+      worker(Janis.Player.Socket.Ctrl, [broadcaster, latency, Janis.Player.Buffer]),
     ]
 
     supervise(children, strategy: :one_for_all, max_restarts: 10, max_seconds: 1)

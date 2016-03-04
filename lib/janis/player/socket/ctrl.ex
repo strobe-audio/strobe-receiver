@@ -1,5 +1,5 @@
 defmodule Janis.Player.Socket.Ctrl do
-  use Janis.Player.Socket.Base
+  use Janis.Player.Socket
 
   def handle_info({:tcp, _socket, data}, state) do
     state = data |> Poison.decode! |> handle_message(state)

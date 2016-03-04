@@ -1,5 +1,5 @@
 defmodule Janis.Player.Socket.Data do
-  use Janis.Player.Socket.Base
+  use Janis.Player.Socket
 
   @stop_command << "STOP" >>
 
