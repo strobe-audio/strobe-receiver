@@ -5,6 +5,9 @@ defmodule Janis.Player.Socket.Ctrl do
     state = data |> Poison.decode! |> handle_message(state)
     {:noreply, state}
   end
+  def handle_info({:tcp_closed, _socket}, state) do
+    {:stop, :normal, state}
+  end
 
   def handle_message(%{ "volume" => volume }, state) do
     :ok = Janis.Audio.volume(volume)

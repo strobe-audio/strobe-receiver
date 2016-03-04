@@ -1,54 +1,25 @@
 defmodule Janis.Player do
-  use Supervisor
+  use GenServer
 
-  @supervisor_name Janis.Player
+  @name Janis.Player
 
-  def start_link do
-    Supervisor.start_link(__MODULE__, :ok, name: @supervisor_name)
+  alias Janis.Player.Buffer
+  alias Janis.Player.Socket.Data
+  alias Janis.Player.Socket.Ctrl
+
+  defmodule S do
+    @moduledoc false
+    defstruct [:buffer, :data, :ctrl]
   end
 
-  def start_player(broadcaster, latency) do
-    start_player(@supervisor_name, broadcaster, latency)
+  def start_link(broadcaster, latency) do
+    GenServer.start_link(__MODULE__, {broadcaster, latency})
   end
 
-  def start_player(supervisor, broadcaster, latency) do
-    Supervisor.start_child(supervisor, [broadcaster, latency])
-  end
-
-  def stop_player do
-    stop_player(@supervisor_name)
-  end
-
-  def stop_player(supervisor) do
-    Supervisor.which_children(supervisor) |> terminate_players(supervisor)
-  end
-
-  def terminate_players([child | children], supervisor) do
-    case child do
-    {_id, :restarting, _worker, _modules} ->
-      :ok
-    {_id, :undefined, _worker, _modules} ->
-      :ok
-    {_id, pid, _worker, _modules} ->
-      terminate_player(supervisor, pid)
-    end
-    terminate_players(children, supervisor)
-  end
-
-  def terminate_players([], _supervisor) do
-  end
-
-  def terminate_player(supervisor, player) do
-    :ok = Supervisor.terminate_child(supervisor, player)
-  end
-
-  def init(:ok) do
-    children = [
-      supervisor(Janis.Player.Supervisor, [], [])
-    ]
-    supervise(children, strategy: :simple_one_for_one)
+  def init({broadcaster, latency}) do
+    {:ok, buffer} = Buffer.start_link(broadcaster)
+    {:ok, data}   = Data.start_link(broadcaster, latency, buffer)
+    {:ok, ctrl}   = Ctrl.start_link(broadcaster, latency, buffer)
+    {:ok, %S{buffer: buffer, data: data, ctrl: ctrl}}
   end
 end
-
-
-

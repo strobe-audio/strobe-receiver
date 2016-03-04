@@ -75,6 +75,3 @@ defmodule Janis.Broadcaster do
     round(broadcaster.stream_interval / 1000.0)
   end
 end
-
-
-

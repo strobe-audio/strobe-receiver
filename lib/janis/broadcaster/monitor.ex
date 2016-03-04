@@ -17,19 +17,21 @@ defmodule Janis.Broadcaster.Monitor do
   alias   Janis.Math.MovingAverage
 
   defmodule S do
-    defstruct broadcaster: nil,
-              delta: nil,
-              latency: 0,
-              measurement_count: 0,
-              packet_count: 0,
-              collector: nil,
-              delta_listeners: [],
-              next_measurement_time: nil,
-              delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.1, 0.05)
+    defstruct [
+      broadcaster: nil,
+      sntp: nil,
+      delta: nil,
+      latency: 0,
+      measurement_count: 0,
+      packet_count: 0,
+      collector: nil,
+      delta_listeners: [],
+      next_measurement_time: nil,
+      delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.1, 0.05)
+    ]
   end
 
   @monitor_name Janis.Broadcaster.Monitor
-  @delta_step   2
 
   def time_delta do
     GenServer.call(@monitor_name, :get_delta)
@@ -51,8 +53,9 @@ defmodule Janis.Broadcaster.Monitor do
 
   def init(broadcaster) do
     Logger.info "Starting Broadcaster.Monitor #{inspect broadcaster}"
+    {:ok, sntp} = Janis.Broadcaster.SNTP.start_link(broadcaster)
     Process.flag(:trap_exit, true)
-    {:ok, collect_measurements(%S{broadcaster: broadcaster})}
+    {:ok, collect_measurements(%S{sntp: sntp, broadcaster: broadcaster})}
   end
 
   defp collect_measurements(%S{measurement_count: count} = state) do
@@ -69,9 +72,15 @@ defmodule Janis.Broadcaster.Monitor do
   def handle_info({:EXIT, collector, :normal}, %S{collector: collector} = state) do
     {:noreply, state}
   end
+  def handle_info({:EXIT, collector, {:shutdown, :error}}, %S{collector: collector} = state) do
+    {:stop, :normal, state}
+  end
+  def handle_info({:EXIT, _pid, reason}, state) do
+    {:stop, :normal, state}
+  end
 
-  def handle_info({:start_collection, interval, sample_size}, %{broadcaster: broadcaster} = state) do
-    {:ok, pid} = Collector.start_link(self, broadcaster, interval, sample_size)
+  def handle_info({:start_collection, interval, sample_size}, %{sntp: sntp} = state) do
+    {:ok, pid} = Collector.start_link(self, sntp, interval, sample_size)
     {:noreply, %S{ state | collector: pid}}
   end
 
@@ -94,7 +103,7 @@ defmodule Janis.Broadcaster.Monitor do
     # First measurement! Join receiver channel!
     %S{latency: latency, broadcaster: broadcaster} = state = append_measurement(measurement, state)
     Logger.info "Joining broadcaster ... #{inspect broadcaster} latency: #{ latency }"
-    Janis.Player.start_player(broadcaster, latency)
+    Janis.Player.start_link(broadcaster, latency)
     {:noreply, state}
   end
 
@@ -147,7 +156,6 @@ defmodule Janis.Broadcaster.Monitor do
 
   def terminate(reason, _state) do
     Logger.warn "#{__MODULE__} terminating... #{ inspect reason }"
-    Janis.Player.stop_player
     :ok
   end
 end

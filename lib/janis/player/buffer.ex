@@ -22,8 +22,11 @@ defmodule Janis.Player.Buffer do
             ]
   end
 
-  def start_link(broadcaster, name) do
-    GenServer.start_link(__MODULE__, broadcaster, name: name)
+  def start_link(broadcaster) do
+    start_link(broadcaster, __MODULE__)
+  end
+  def start_link(broadcaster, _name) do
+    GenServer.start_link(__MODULE__, broadcaster)
   end
 
   def put(buffer, packet) do
@@ -37,6 +40,8 @@ defmodule Janis.Player.Buffer do
   def init(broadcaster) do
     Logger.info "init #{ inspect broadcaster }"
     Process.flag(:trap_exit, true)
+    # TODO: receiver a monitor instance to avoid having to register the monitor
+    # process.
     Janis.Broadcaster.Monitor.add_time_delta_listener(self)
     {:ok, %S{broadcaster: broadcaster}}
   end
@@ -197,7 +202,6 @@ defmodule Janis.Player.Buffer do
   def terminate(_reason, %S{interval_timer: tref} = _state) do
     Logger.info "Stopping #{__MODULE__}"
     remove_handle(tref)
-    Janis.Broadcaster.Monitor.remove_time_delta_listener(self)
     :ok
   end
 
@@ -206,4 +210,3 @@ defmodule Janis.Player.Buffer do
     {:ok, :cancel} = :timer.cancel(tref)
   end
 end
-

@@ -19,6 +19,7 @@ defmodule Janis.Player.Socket do
 
       def init([broadcaster, latency, buffer]) do
         Logger.info "Init #{inspect broadcaster} latency: #{ latency }"
+        Process.flag(:trap_exit, true)
         {:ok, socket} = connect(broadcaster, latency)
         {:ok, %S{broadcaster: broadcaster, buffer: buffer, socket: socket}}
       end
@@ -26,6 +27,11 @@ defmodule Janis.Player.Socket do
       def handle_info(event, state) do
         Logger.debug "#{ __MODULE__} unhandled event #{ inspect event }"
         {:noreply, state}
+      end
+
+      def terminate(reason, state) do
+        Logger.info "Terminate #{ inspect reason }"
+        :ok
       end
 
       def handle_message(message, state) do
@@ -36,8 +42,17 @@ defmodule Janis.Player.Socket do
       def connect(broadcaster, latency) do
         broadcaster
         |> tcp_connect
+        |> catch_connection_error
         |> tcp_configure
         |> register(broadcaster, latency)
+      end
+
+      defp catch_connection_error({:error, _reason} = error) do
+        Logger.error "Failed to connect #{ inspect error }"
+        throw(error)
+      end
+      defp catch_connection_error(connection) do
+        connection
       end
 
       def register({:ok, socket}, broadcaster, latency) do

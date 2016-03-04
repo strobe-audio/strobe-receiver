@@ -9,11 +9,8 @@ defmodule Janis.Broadcaster.Supervisor do
 
   def init(broadcaster) do
     children = [
-      worker(Janis.Broadcaster.Monitor, [broadcaster], []),
-      worker(Janis.Broadcaster.SNTP,    [broadcaster], []),
+      worker(Janis.Broadcaster.Monitor, [broadcaster], [restart: :transient]),
     ]
-    supervise(children, strategy: :one_for_all)
+    supervise(children, strategy: :one_for_all, max_restarts: 1, max_seconds: 10)
   end
 end
-
-
