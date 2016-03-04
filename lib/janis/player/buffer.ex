@@ -11,15 +11,16 @@ defmodule Janis.Player.Buffer do
 
 
   defmodule S do
-    defstruct [queue:           :queue.new,
-              broadcaster:     nil,
-              status:          :stopped,
-              count:           0,
-              time_delta:      nil,
-              last_emit_check: nil,
-              interval_timer:  nil,
-              last_timestamp:  nil,
-            ]
+    defstruct [
+      queue:           :queue.new,
+      broadcaster:     nil,
+      status:          :stopped,
+      count:           0,
+      time_delta:      nil,
+      last_emit_check: nil,
+      interval_timer:  nil,
+      last_timestamp:  nil,
+    ]
   end
 
   def start_link(broadcaster) do
