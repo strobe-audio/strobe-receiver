@@ -7,12 +7,12 @@ defmodule Janis.Player do
     Supervisor.start_link(__MODULE__, :ok, name: @supervisor_name)
   end
 
-  def start_player(address, stream_info) do
-    start_player(@supervisor_name, address, stream_info)
+  def start_player(broadcaster, latency) do
+    start_player(@supervisor_name, broadcaster, latency)
   end
 
-  def start_player(supervisor, address, stream_info) do
-    Supervisor.start_child(supervisor, [address, stream_info])
+  def start_player(supervisor, broadcaster, latency) do
+    Supervisor.start_child(supervisor, [broadcaster, latency])
   end
 
   def stop_player do

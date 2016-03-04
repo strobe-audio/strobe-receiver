@@ -35,13 +35,13 @@ defmodule Janis.DNSSD do
   end
 
   defp dnssd_resolve({:browse, :remove, {_service_name, _service_type, _domain} = service}) do
-    Janis.broadcaster_disconnect(service)
+    # Janis.broadcaster_disconnect(service)
   end
 
   defp resource({:ok, {address, port, texts}}, service) do
-    Logger.info "Got resource #{inspect address}:#{port} / #{inspect texts}"
     config = parse_texts(texts)
-    Janis.broadcaster_connect(service, address, port, config)
+    Logger.info "Got resource #{inspect address}:#{port} / #{inspect config}"
+    Janis.broadcaster_connect(address, port, config)
   end
 
   defp resource({:error, :timeout}, service) do
@@ -49,8 +49,16 @@ defmodule Janis.DNSSD do
   end
 
   defp parse_texts(texts) do
-    Keyword.new texts, fn({k, v}) ->
-      {String.to_atom(k), v}
-    end
+    Keyword.new texts, &parse_text/1
+  end
+
+  @integer_keys ["ctrl_port", "data_port", "stream_interval", "packet_size"]
+
+  defp parse_text({key, value})
+  when key in @integer_keys do
+    {String.to_atom(key), String.to_integer(value)}
+  end
+  defp parse_text({key, value}) do
+    {String.to_atom(key), value}
   end
 end

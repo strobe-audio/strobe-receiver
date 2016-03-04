@@ -1,68 +1,29 @@
 defmodule Janis.Player.Buffer do
-  use     GenServer
-  use     Monotonic
-  require Logger
-
   @moduledoc """
   Receives data from the buffer and passes it onto the playback process on demand
   """
 
-  defmodule Delta do
-    @moduledoc "Smear changes to time delta into the smallest increment possible"
+  use     GenServer
+  use     Monotonic
+  require Logger
 
-    require Logger
-    require Monotonic
+  alias   Janis.Player.Buffer.Delta
 
-    def new(current_delta) do
-      %{current: current_delta, pending: 0, d: 0, time: 0}
-    end
-
-    def update(new_delta, next_measurement_time, %{current: current, pending: pending} = _state) do
-      diff = new_delta - (current + pending)
-      t = next_measurement_time - monotonic_milliseconds
-      d = (diff / t)
-      %{ current: current, pending: diff, d: d, time: monotonic_milliseconds}
-    end
-
-    def current(%{current: current, pending: 0} = state) do
-      {current, state}
-    end
-
-    def current(%{current: current, pending: pending} = state) when pending > 1000 do
-      Logger.debug "Applying large time delta #{pending}"
-      now = monotonic_milliseconds
-      current = current + pending
-      pending = 0
-      {current, %{state | current: current, pending: pending, time: now}}
-    end
-
-    # TODO: use this line-drawing algo to spread the chagnes
-    # more evenly:
-    #   https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-    def current(%{current: current, pending: pending, d: d, time: t} = state) do
-      now = monotonic_milliseconds
-      dt  = now - t
-      c   = round Float.ceil(d * dt)
-      c   = Enum.min [pending, c]
-      current = current + c
-      pending = pending - c
-      {current, %{state | current: current, pending: pending, time: now}}
-    end
-  end
 
   defmodule S do
-    defstruct queue:           :queue.new,
-              stream_info:     nil,
+    defstruct [queue:           :queue.new,
+              broadcaster:     nil,
               status:          :stopped,
               count:           0,
               time_delta:      nil,
               last_emit_check: nil,
-              interval_timer:  nil
-
+              interval_timer:  nil,
+              last_timestamp:  nil,
+            ]
   end
 
-  def start_link(stream_info, name) do
-    GenServer.start_link(__MODULE__, stream_info, name: name)
+  def start_link(broadcaster, name) do
+    GenServer.start_link(__MODULE__, broadcaster, name: name)
   end
 
   def put(buffer, packet) do
@@ -73,12 +34,11 @@ defmodule Janis.Player.Buffer do
     GenServer.cast(buffer, :stop)
   end
 
-  def init(stream_info) do
-    # Logger.disable(self)
-    Logger.info "Player.Buffer up"
+  def init(broadcaster) do
+    Logger.info "init #{ inspect broadcaster }"
     Process.flag(:trap_exit, true)
     Janis.Broadcaster.Monitor.add_time_delta_listener(self)
-    {:ok, %S{stream_info: stream_info}}
+    {:ok, %S{broadcaster: broadcaster}}
   end
 
   def handle_cast({:put, packet}, state) do
@@ -120,10 +80,22 @@ defmodule Janis.Player.Buffer do
     {:ok, tref} = :timer.send_interval(check_emit_interval(state), :check_emit)
     # Because our check interval may be higher than the gap between now & the
     # first packet, we test for emission (?) when receiving the first packets
-    put_packet(packet, %S{state | status: :playing, interval_timer: tref}) |> maybe_emit_packets
+    put_packet!(packet, %S{state | status: :playing, interval_timer: tref}) |> maybe_emit_packets
   end
 
-  def put_packet(packet, %S{status: :playing, queue: queue, count: count} = state) do
+  def put_packet({timestamp, _data} = packet, %S{last_timestamp: nil} = state) do
+    put_packet!(packet, state)
+  end
+  def put_packet({timestamp, _data} = _packet, %S{last_timestamp: last_timestamp} = state)
+  when timestamp <= last_timestamp do
+    Logger.debug "Ignoring packet with timestamp in the past #{ timestamp } <= #{ last_timestamp }"
+    state
+  end
+  def put_packet(packet, state) do
+    put_packet!(packet, state)
+  end
+
+  def put_packet!({timestamp, _data} = packet, %S{status: :playing, queue: queue, count: count} = state) do
     {translated_packet, state} = translate_packet(packet, state)
     { timestamp, _ } = translated_packet
     case timestamp - monotonic_microseconds do
@@ -132,11 +104,11 @@ defmodule Janis.Player.Buffer do
       _ -> nil
     end
     queue  = cons(translated_packet, queue, count)
-    %S{ state | queue: queue, count: count + 1 }
+    %S{ state | queue: queue, count: count + 1, last_timestamp: timestamp }
   end
 
-  defp check_emit_interval(%S{stream_info: {interval_ms, _size}}) do
-    round(interval_ms / 4)
+  defp check_emit_interval(%S{broadcaster: broadcaster}) do
+    round(Janis.Broadcaster.stream_interval_ms(broadcaster) / 4.0)
   end
 
   def cons(packet, queue, count) do
@@ -154,7 +126,8 @@ defmodule Janis.Player.Buffer do
     maybe_emit_packets(queue, state)
   end
 
-  def maybe_emit_packets(queue, %S{stream_info: {interval_ms, _size}, last_emit_check: last_check} = state) do
+  def maybe_emit_packets(queue, %S{broadcaster: broadcaster, last_emit_check: last_check} = state) do
+    interval_ms = Janis.Broadcaster.stream_interval_ms(broadcaster)
 
     last_check = case last_check do
       c when is_nil(c) -> monotonic_microseconds
@@ -228,9 +201,7 @@ defmodule Janis.Player.Buffer do
     :ok
   end
 
-  defp remove_handle(nil) do
-  end
-
+  defp remove_handle(nil), do: nil
   defp remove_handle(tref) do
     {:ok, :cancel} = :timer.cancel(tref)
   end

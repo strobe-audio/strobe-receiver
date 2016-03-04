@@ -47,7 +47,7 @@ defmodule Janis.Broadcaster.Monitor do
 
   defp collect_measurements(%S{measurement_count: count} = state) do
     {interval, sample_size, delay} = cond do
-      count == 0 -> { 100, 1, 0     }
+      count == 0 -> { 100, 10, 0     }
       true       -> { 100, 1,  1_000 }
     end
     :timer.send_after(delay, self, {:start_collection, interval, sample_size})
@@ -82,9 +82,9 @@ defmodule Janis.Broadcaster.Monitor do
 
   def handle_cast({:append_measurement, measurement}, %S{measurement_count: 0} = state) do
     # First measurement! Join receiver channel!
-    %S{latency: latency} = state = append_measurement(measurement, state)
-    Logger.info "Joining broadcaster ... #{inspect state} "
-    Janis.Broadcaster.Socket.join(%{latency: latency})
+    %S{latency: latency, broadcaster: broadcaster} = state = append_measurement(measurement, state)
+    Logger.info "Joining broadcaster ... #{inspect broadcaster} latency: #{ latency }"
+    Janis.Player.start_player(broadcaster, latency)
     {:noreply, state}
   end
 
@@ -131,7 +131,7 @@ defmodule Janis.Broadcaster.Monitor do
     old_delta = MovingAverage.average(avg) |> round
     avg       = MovingAverage.update(avg, measured_delta)
     new_delta = MovingAverage.average(avg) |> round
-    Logger.info "New time delta measurement [#{measured_delta}] - #{new_delta} (#{new_delta - old_delta}) ~ #{ Float.round(avg.b + 0.0, 3) }"
+    # Logger.debug "New time delta measurement [#{measured_delta}] - #{new_delta} (#{new_delta - old_delta}) ~ #{ Float.round(avg.b + 0.0, 3) }"
     %S{ state | delta: new_delta, delta_average: avg }
   end
 
