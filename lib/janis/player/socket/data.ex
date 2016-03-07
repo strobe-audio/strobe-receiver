@@ -37,7 +37,7 @@ defmodule Janis.Player.Socket.Data do
     port
   end
 
-  def registration_params(broadcaster, latency) do
+  def registration_params(_broadcaster, latency) do
     %{ id: id, latency: latency }
   end
 end

@@ -88,7 +88,7 @@ defmodule Janis.Player.Buffer do
     put_packet!(packet, %S{state | status: :playing, interval_timer: tref}) |> maybe_emit_packets
   end
 
-  def put_packet({timestamp, _data} = packet, %S{last_timestamp: nil} = state) do
+  def put_packet(packet, %S{last_timestamp: nil} = state) do
     put_packet!(packet, state)
   end
   def put_packet({timestamp, _data} = _packet, %S{last_timestamp: last_timestamp} = state)
@@ -100,7 +100,7 @@ defmodule Janis.Player.Buffer do
     put_packet!(packet, state)
   end
 
-  def put_packet!({timestamp, _data} = packet, %S{status: :playing, queue: queue, count: count} = state) do
+  def put_packet!(packet, %S{status: :playing, queue: queue, count: count} = state) do
     {translated_packet, state} = translate_packet(packet, state)
     { timestamp, _ } = translated_packet
     case timestamp - monotonic_microseconds do
