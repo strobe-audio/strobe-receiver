@@ -25,7 +25,7 @@ defmodule Janis.Broadcaster do
   end
 
   def start_broadcaster(supervisor, hostname, port, config) do
-    Supervisor.start_child(supervisor, [ new(hostname, port, config) ])
+    Supervisor.start_child(supervisor, [new(hostname, port, config)])
   end
 
   def stop_broadcaster(service) do
@@ -57,7 +57,7 @@ defmodule Janis.Broadcaster do
 
   def init(:ok) do
     children = [
-      supervisor(Janis.Broadcaster.Supervisor, [], [])
+      worker(Janis.Broadcaster.Monitor, [], [restart: :transient]),
     ]
     supervise(children, strategy: :simple_one_for_one)
   end

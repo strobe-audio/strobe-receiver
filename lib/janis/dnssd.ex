@@ -36,8 +36,8 @@ defmodule Janis.DNSSD do
       :down ->
         Logger.warn "Broadcaster down"
         %S{ state | broadcaster: nil }
-      :conflict ->
-        Logger.warn "Multiple broadcasters on network, ignoring..."
+      {:conflict, event} ->
+        Logger.warn "Multiple broadcasters on network, ignoring #{ to_string(event) }..."
         state
     end
     {:noreply, state}
@@ -50,17 +50,20 @@ defmodule Janis.DNSSD do
   end
 
   defp dnssd_resolve({:browse, :add, _service}, _state) do
-    :conflict
+    {:conflict, :add}
   end
 
-  defp dnssd_resolve({:browse, :remove, _service}, _state) do
-    :down
+  defp dnssd_resolve({:browse, :remove, _service}, %S{broadcaster: broadcaster}) do
+    case Process.alive?(broadcaster) do
+      true  -> {:conflict, :remove}
+      false -> :down
+    end
   end
 
   defp resource({:ok, {address, port, texts}}, _service) do
     config = parse_texts(texts)
     Logger.info "Got resource #{inspect address}:#{port} / #{inspect config}"
-    Janis.broadcaster_connect(address, port, config)
+    Janis.Broadcaster.start_broadcaster(address, port, config)
   end
 
   defp resource({:error, :timeout}, service) do
