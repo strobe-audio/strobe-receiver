@@ -4,7 +4,7 @@ defmodule Janis.Mixfile do
   def project do
     [app: :janis,
      version: "0.0.1",
-     elixir: "~> 1.0",
+     elixir: "~> 1.2",
      compilers: [:make, :elixir, :app],
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
