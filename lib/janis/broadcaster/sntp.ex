@@ -71,7 +71,7 @@ defmodule Janis.Broadcaster.SNTP do
       {:udp, ^socket, addr, port, data} -> parse_response({addr, port, data})
       # what else would we get
       msg -> {:error, msg}
-    after 100 ->
+    after 1000 ->
       {:error, :timeout}
     end
   end
