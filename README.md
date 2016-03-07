@@ -9,6 +9,12 @@ Janis.Player.play song
 
 ```
 
+TODO
+----
+
+- [ ] monitior broadcaster process from dnssd
+- [x] remove unused enm dep
+
 Dependencies
 ------------
 
