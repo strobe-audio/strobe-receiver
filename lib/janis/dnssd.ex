@@ -2,7 +2,14 @@ defmodule Janis.DNSSD do
   use     GenServer
   require Logger
 
-  @name Otis.DNSSD
+  @name         Otis.DNSSD
+  @service_name "_peep-broadcaster._tcp"
+
+  defmodule S do
+    @moduledoc false
+
+    defstruct [:browser, :broadcaster]
+  end
 
   def start_link do
     GenServer.start_link(__MODULE__, :ok, name: @name)
@@ -10,35 +17,47 @@ defmodule Janis.DNSSD do
 
   def init(:ok) do
     Process.flag(:trap_exit, true)
-    {:ok, ref} = :dnssd.browse(service_name)
-    {:ok, %{ref: ref}}
+    {:ok, browser} = :dnssd.browse(@service_name)
+    {:ok, %S{browser: browser}}
   end
 
-  def terminate(reason, %{ref: ref} = _state) do
-    Logger.warn "Terminate #{__MODULE__} #{inspect reason}"
-    :dnssd.stop(ref)
+  def terminate(reason, %{browser: browser} = _state) do
+    Logger.warn "Terminate #{inspect reason}"
+    :dnssd.stop(browser)
     :ok
   end
 
-  defp service_name do
-    "_peep-broadcaster._tcp"
-  end
 
   def handle_info({:dnssd, _ref, msg}, state) do
-    dnssd_resolve(msg)
+    state = case dnssd_resolve(msg, state) do
+      {:ok, broadcaster} ->
+        Logger.info "Broadcaster up #{ inspect broadcaster}"
+        %S{ state | broadcaster: broadcaster }
+      :down ->
+        Logger.warn "Broadcaster down"
+        %S{ state | broadcaster: nil }
+      :conflict ->
+        Logger.warn "Multiple broadcasters on network, ignoring..."
+        state
+    end
     {:noreply, state}
   end
 
-  defp dnssd_resolve({:browse, :add, {service_name, service_type, domain} = service}) do
+  defp dnssd_resolve({:browse, :add, {service_name, service_type, domain} = service}, %S{broadcaster: nil}) do
     Logger.info "Add resource #{inspect service}"
-    :dnssd.resolve_sync(service_name, service_type, domain) |> resource(service)
+    :dnssd.resolve_sync(service_name, service_type, domain)
+    |> resource(service)
   end
 
-  defp dnssd_resolve({:browse, :remove, {_service_name, _service_type, _domain} = service}) do
-    # Janis.broadcaster_disconnect(service)
+  defp dnssd_resolve({:browse, :add, _service}, _state) do
+    :conflict
   end
 
-  defp resource({:ok, {address, port, texts}}, service) do
+  defp dnssd_resolve({:browse, :remove, _service}, _state) do
+    :down
+  end
+
+  defp resource({:ok, {address, port, texts}}, _service) do
     config = parse_texts(texts)
     Logger.info "Got resource #{inspect address}:#{port} / #{inspect config}"
     Janis.broadcaster_connect(address, port, config)
