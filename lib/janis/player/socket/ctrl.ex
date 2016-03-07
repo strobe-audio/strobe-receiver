@@ -6,7 +6,7 @@ defmodule Janis.Player.Socket.Ctrl do
     {:noreply, state}
   end
   def handle_info({:tcp_closed, _socket}, state) do
-    {:stop, :normal, state}
+    {:stop, :tcp_closed, state}
   end
 
   def handle_message(%{ "volume" => volume }, state) do

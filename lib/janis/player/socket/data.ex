@@ -8,7 +8,7 @@ defmodule Janis.Player.Socket.Data do
     {:noreply, state}
   end
   def handle_info({:tcp_closed, _socket}, state) do
-    {:stop, :normal, state}
+    {:stop, :tcp_closed, state}
   end
 
   defp data_in(state, @stop_command) do

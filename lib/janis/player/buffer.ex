@@ -40,7 +40,6 @@ defmodule Janis.Player.Buffer do
 
   def init(broadcaster) do
     Logger.info "init #{ inspect broadcaster }"
-    Process.flag(:trap_exit, true)
     # TODO: receiver a monitor instance to avoid having to register the monitor
     # process.
     Janis.Broadcaster.Monitor.add_time_delta_listener(self)

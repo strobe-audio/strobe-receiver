@@ -69,18 +69,12 @@ defmodule Janis.Broadcaster.Monitor do
 
   ########################################################
 
-  def handle_info({:EXIT, collector, :normal}, %S{collector: collector} = state) do
-    {:noreply, state}
-  end
-  def handle_info({:EXIT, collector, {:shutdown, :error}}, %S{collector: collector} = state) do
-    {:stop, :normal, state}
-  end
-  def handle_info({:EXIT, _pid, reason}, state) do
+  def handle_info({:EXIT, _pid, _reason}, state) do
     {:stop, :normal, state}
   end
 
   def handle_info({:start_collection, interval, sample_size}, %{sntp: sntp} = state) do
-    {:ok, pid} = Collector.start_link(self, sntp, interval, sample_size)
+    {:ok, pid} = Collector.start_collector(self, sntp, interval, sample_size)
     {:noreply, %S{ state | collector: pid}}
   end
 
@@ -89,7 +83,6 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   def handle_cast({:add_time_delta_listener, listener}, %S{delta_listeners: listeners, delta: delta} = state) do
-
     GenServer.cast(listener, {:init_time_delta, delta})
     {:noreply, %S{ state | delta_listeners: [ listener | listeners ] }}
   end
@@ -97,6 +90,11 @@ defmodule Janis.Broadcaster.Monitor do
   def handle_cast({:remove_time_delta_listener, listener}, %S{delta_listeners: listeners} = state) do
     listeners = Enum.reject listeners, &(&1 == listener)
     {:noreply, %S{ state | delta_listeners: listeners }}
+  end
+
+  def handle_cast(:sntp_connection_failure, state) do
+    Logger.warn "Got sntp connection error, terminating..."
+    {:stop, :normal, state}
   end
 
   def handle_cast({:append_measurement, measurement}, %S{measurement_count: 0} = state) do
