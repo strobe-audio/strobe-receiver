@@ -18,10 +18,11 @@ defmodule Janis.Player.Buffer.Delta do
   end
 
   def update(new_delta, next_measurement_time, %S{current: current, pending: pending} = _state) do
+    now = monotonic_milliseconds
     diff = new_delta - (current + pending)
-    t = next_measurement_time - monotonic_milliseconds
+    t = next_measurement_time - now
     d = (diff / t)
-    %S{ current: current, pending: diff, d: d, time: monotonic_milliseconds}
+    %S{ current: current, pending: diff, d: d, time: now}
   end
 
   def current(%S{current: current, pending: 0} = state) do
@@ -32,18 +33,13 @@ defmodule Janis.Player.Buffer.Delta do
     Logger.warn "Applying large time delta #{pending}"
     now = monotonic_milliseconds
     current = current + pending
-    pending = 0
-    {current, %S{state | current: current, pending: pending, time: now}}
+    {current, %S{state | current: current, pending: 0, time: now}}
   end
 
-  # TODO: use this line-drawing algo to spread the chagnes
-  # more evenly:
-  #   https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
   def current(%S{current: current, pending: pending, d: d, time: t} = state) do
     now = monotonic_milliseconds
     dt  = now - t
-    c   = round Float.ceil(d * dt)
-    c   = Enum.min [pending, c]
+    c   = (d * dt) |> round |> min(pending)
     current = current + c
     pending = pending - c
     {current, %S{state | current: current, pending: pending, time: now}}
