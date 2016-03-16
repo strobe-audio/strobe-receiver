@@ -169,7 +169,7 @@ static int audio_callback(const void* _input,
 		// remove all things from the ring buffer
 		timestamped_packet _packet;
 		while (PaUtil_GetRingBufferReadAvailable(&context->audio_buffer) > 0) {
-			printf("Popping %d\n\r", PaUtil_GetRingBufferReadAvailable(&context->audio_buffer));
+			printf("Popping %ld\n\r", (long)PaUtil_GetRingBufferReadAvailable(&context->audio_buffer));
 			PaUtil_ReadRingBuffer(&context->audio_buffer, &_packet, 1);
 		}
 		context->stopped = false;
