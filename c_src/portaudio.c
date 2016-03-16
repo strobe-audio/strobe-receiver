@@ -318,7 +318,12 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 	context->frame_count              = (uint64_t)0;
 	context->playing                  = false;
 	context->stopped                  = false;
-	context->volume                   = 1.0f;
+	// start with the volume turned down so that if we get audio packets before
+	// we get a volume command we don't play anything at the wrong volume --
+	// it'll just take a little longer for the music to appear.
+	// This initial setting has to mirror the initial state in
+	// Otis.Receivers.ControlConnection.initial_settings/0
+	context->volume                   = 0.0f;
 
 	PaUtil_InitializeRingBuffer(&context->audio_buffer, sizeof(timestamped_packet), PACKET_BUFFER_SIZE, context->audio_buffer_data);
 
