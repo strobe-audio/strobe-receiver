@@ -56,7 +56,7 @@ defmodule Janis.Player.Buffer do
     {:noreply, %S{ state | time_delta: Delta.new(delta) }}
   end
 
-  def handle_cast({:time_delta_change, delta, next_measurement_time}, %S{time_delta: time_delta, status: :stopped} = state) do
+  def handle_cast({:time_delta_change, delta, _next_measurement_time}, %S{status: :stopped} = state) do
     # Logger.debug "Applying time delta #{ delta }"
     {:noreply, %S{state | time_delta: Delta.new(delta)}}
   end
