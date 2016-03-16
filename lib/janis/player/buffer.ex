@@ -105,16 +105,17 @@ defmodule Janis.Player.Buffer do
     put_packet!(packet, state)
   end
 
-  def put_packet!(packet, %S{status: :playing, queue: queue, count: count} = state) do
+  def put_packet!({broadcaster_timestamp, _} = packet, %S{status: :playing, queue: queue, count: count} = state) do
     {translated_packet, state} = translate_packet(packet, state)
-    { timestamp, _ } = translated_packet
+    {timestamp, _} = translated_packet
     case timestamp - monotonic_microseconds do
       x when x <= 0 ->
         Logger.warn "Late packet #{x} µs"
       _ -> nil
     end
-    queue  = cons(translated_packet, queue, count)
-    %S{ state | queue: queue, count: count + 1, last_timestamp: timestamp }
+    queue = cons(translated_packet, queue, count)
+    # The timestamp comparison guards are done before translation
+    %S{ state | queue: queue, count: count + 1, last_timestamp: broadcaster_timestamp }
   end
 
   defp check_emit_interval(%S{broadcaster: broadcaster}) do
