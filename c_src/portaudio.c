@@ -36,7 +36,13 @@ long copy_packet_with_offset(
 		offset = packet->len;
 	}
 
-	memcpy((out + outOffset), (float *)(packet->data + packet->offset), len * context->sample_size);
+	if (context->volume == (float)0.0) {
+		memset((out + outOffset), 0, len * context->sample_size);
+	} else {
+		for (unsigned long i = 0; i < len; i++ ) {
+			*(out + outOffset + i) = context->volume * *(packet->data + packet->offset + i);
+		}
+	}
 
 	packet->offset = offset;
 
@@ -396,11 +402,11 @@ static void encode_response(char *rbuf, int *index, long buffer_size) {
 }
 
 // based on src_short_to_float_array https://github.com/erikd/libsamplerate/blob/master/src/samplerate.c
-static inline void short_to_float_array(const short *in, float *out, float volume, int len)
+static inline void short_to_float_array(const short *in, float *out, int len)
 {
 	while (len) {
 		len--;
-		out[len] = volume * (float) ((in[len]) / (1.0 * 0x8000)) ;
+		out[len] = (float) ((in[len]) / (1.0 * 0x8000)) ;
 	}
 
 	return;
@@ -435,7 +441,7 @@ static ErlDrvSSizeT portaudio_drv_control(
 			};
 
 			// conversion to float needed by libsamplerate
-			short_to_float_array((short*)(buf + 10), packet.data, context->volume, packet.len);
+			short_to_float_array((short*)(buf + 10), packet.data, packet.len);
 
 			PaUtil_WriteRingBuffer(&context->audio_buffer, &packet, 1);
 		}
