@@ -78,8 +78,13 @@ defmodule Janis.DNSSD do
   end
 
   defp start_and_link_broadcaster(address, port, config) do
-    {:ok, pid} = Janis.Broadcaster.start_broadcaster(address, port, config)
-    Process.monitor(pid)
+    pid = case Janis.Broadcaster.start_broadcaster(address, port, config) do
+      {:ok, pid} ->
+        Process.monitor(pid)
+        pid
+      {:error, {:already_started, pid}} ->
+        pid
+    end
     {:ok, pid}
   end
 
