@@ -30,7 +30,7 @@ SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c c_src/monotonic_time.c c_
 
 MKDIR_P      = mkdir -p
 OBJECT_FILES = $(SOURCE_FILES:.c=.o)
-PRIV_DIR     = priv_dir
+PRIV_DIR     = priv
 TARGET_LIB   = $(PRIV_DIR)/portaudio.so
 
 
@@ -64,5 +64,5 @@ ${PRIV_DIR}:
 	${MKDIR_P} ${PRIV_DIR}
 
 clean:
-	rm -f  c_src/*.o priv_dir/*.so
+	rm -f  c_src/*.o priv/*.so
 

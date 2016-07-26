@@ -24,7 +24,7 @@ defmodule Janis.Audio.PortAudio do
 
   def init(:ok) do
     Logger.info "Starting portaudio driver..."
-    :ok = load_driver
+    :ok = load_driver()
     port = Port.open({:spawn_driver, @shared_lib}, [:stderr_to_stdout, :binary, :stream])
     {:ok, {port}}
   end
@@ -118,13 +118,17 @@ defmodule Janis.Audio.PortAudio do
   end
 
   defp load_driver do
-    case :erl_ddll.load_driver("./priv_dir", @shared_lib) do
+    case :erl_ddll.load_driver(priv_dir(), @shared_lib) do
       :ok -> :ok
       {:error, :already_loaded} -> :ok
       {:error, reason} ->
         Logger.error("Unable to load portaudio driver #{inspect reason}: #{:erl_ddll.format_error(reason)}")
         :error
     end
+  end
+
+  defp priv_dir do
+    :code.priv_dir(:janis)
   end
 
   defp audio_packet({timestamp, data}) do
