@@ -43,7 +43,9 @@ defmodule Janis.Math do
 
   # https://en.wikipedia.org/wiki/Exponential_smoothing#Double_exponential_smoothing
   defmodule DoubleExponentialMovingAverage do
-    defstruct alpha: 1.0, beta: 1.0, n: 0, s: 0, b: 0
+    defstruct alpha: 1.0, beta: 1.0, n: 0, s: 0, b: 0, bb: [], ss: []
+
+    @stabilisation_period 50
 
     alias __MODULE__, as: A
 
@@ -54,14 +56,26 @@ defmodule Janis.Math do
     end
 
     def update(%A{ n: 0 } = ema, v) do
-      increment(%A{ema | s: v, b: v})
+      increment(%A{ema | s: v, b: v, bb: [], ss: [v]})
     end
 
-    def update(%A{ n: 1 } = ema, v) do
-      increment(%A{ema | s: v, b: v - ema.b})
+    def update(%A{ n: n } = ema, v) when n < @stabilisation_period do
+      ss = [ v | ema.ss ]
+      s_t = Enum.sum(ema.ss) / n
+      bb = [ s_t - ema.s | ema.bb ]
+      b_t = Enum.sum(ema.bb) / n
+      increment(%A{ema | s: s_t, b: b_t, bb: bb, ss: ss})
     end
 
-    def update(%A{alpha: alpha, beta: beta, s: s, b: b} = ema, v) do
+    def update(%A{ n: n } = ema, v) when n == @stabilisation_period do
+      _update(%A{ ema | bb: [], ss: []}, v)
+    end
+
+    def update(ema, v) do
+      _update(ema, v)
+    end
+
+    defp _update(%A{alpha: alpha, beta: beta, s: s, b: b} = ema, v) do
       s_t = (alpha * v) + (1.0 - alpha) * (s + b)
       b_t = beta * (s_t - s) + (1.0 - beta) * b
       increment(%A{ ema | s: s_t, b: b_t })

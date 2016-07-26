@@ -27,7 +27,7 @@ defmodule Janis.Broadcaster.Monitor do
       collector: nil,
       delta_listeners: [],
       next_measurement_time: nil,
-      delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.1, 0.05)
+      delta_average: Janis.Math.DoubleExponentialMovingAverage.new(0.1, 0.02)
     ]
   end
 
@@ -69,7 +69,8 @@ defmodule Janis.Broadcaster.Monitor do
 
   ########################################################
 
-  def handle_info({:EXIT, _pid, _reason}, state) do
+  def handle_info({:EXIT, _pid, reason}, state) do
+    Logger.info "Got exit #{ inspect reason }, stopping..."
     {:stop, :normal, state}
   end
 
@@ -148,7 +149,7 @@ defmodule Janis.Broadcaster.Monitor do
     old_delta = MovingAverage.average(avg) |> round
     avg       = MovingAverage.update(avg, measured_delta)
     new_delta = MovingAverage.average(avg) |> round
-    Logger.debug "New time delta measurement [#{measured_delta}] - #{new_delta} (#{new_delta - old_delta}) ~ #{ Float.round(avg.b + 0.0, 3) }"
+    Logger.debug "Time Δ: #{String.rjust(to_string(measured_delta), 5)} / #{String.ljust(to_string(new_delta - old_delta), 5)} | #{String.rjust(to_string(new_delta), 5)} ~ #{ Float.round(avg.b + 0.0, 3) }"
     %S{ state | delta: new_delta, delta_average: avg }
   end
 
