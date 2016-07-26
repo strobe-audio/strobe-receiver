@@ -10,7 +10,7 @@ defmodule Janis.Broadcaster.SNTP do
   @name Janis.Broadcaster.SNTP
 
   def start_link(broadcaster) do
-    GenServer.start_link(__MODULE__, broadcaster, name: @name)
+    GenServer.start_link(__MODULE__, broadcaster)
   end
 
   def init(broadcaster) do

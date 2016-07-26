@@ -49,8 +49,12 @@ defmodule Janis.Broadcaster.Monitor.Collector do
     end
 
     def handle_info(:measure, %S{count: count} = state) when count > 0 do
-      state = measure_sync_and_schedule(state)
-      {:noreply, state}
+      case measure_sync_and_schedule(state) do
+        {:ok, state} ->
+          {:noreply, state}
+        {:error, _reason} ->
+          {:stop, {:shutdown, :normal}, state}
+      end
     end
 
     def handle_info(:measure, %S{count: count, monitor: monitor} = state) when count <= 0 do
@@ -65,18 +69,24 @@ defmodule Janis.Broadcaster.Monitor.Collector do
     end
 
     defp measure_sync_and_schedule(state) do
-      state = measure_sync(state)
-      schedule(state.interval)
-      state
+      case measure_sync(state) do
+        {:ok, state} = success ->
+          schedule(state.interval)
+          success
+        {:error, _reason} = error ->
+          error
+      end
     end
 
     defp measure_sync(%S{measurements: measurements, count: count, sntp: sntp} = state) when count > 0  do
       case sync_exchange(sntp) do
         {:ok, latency, delta} ->
-          %S{ state | count: count - 1,  errors: 0, measurements: [{latency, delta} | measurements]}
+          {:ok, %S{ state | count: count - 1,  errors: 0, measurements: [{latency, delta} | measurements]} }
+        {:error, {:EXIT, _pid, _reason}} = err ->
+          err
         {:error, _reason} = err ->
           Logger.warn "Error measuring time sync #{inspect err}"
-          %S{state | errors: state.errors + 1}
+          {:ok, %S{state | errors: state.errors + 1} }
       end
     end
 

@@ -34,7 +34,7 @@ defmodule Janis.DNSSD do
         %S{ state | broadcaster: broadcaster }
       :down ->
         Logger.warn "Broadcaster service offline"
-        state
+        stop_broadcaster(state)
       {:conflict, event} ->
         Logger.warn "Multiple broadcasters on network, ignoring #{ to_string(event) }..."
         state
@@ -45,6 +45,16 @@ defmodule Janis.DNSSD do
   def handle_info({:DOWN, _ref, :process, broadcaster, reason}, %S{broadcaster: broadcaster} = state) do
     Logger.warn "Broadcaster terminated #{ inspect reason }"
     {:noreply, %S{state | broadcaster: nil}}
+  end
+
+  defp stop_broadcaster(%S{ broadcaster: nil } = state) do
+    Logger.info "Broadcaster already stopped..."
+    state
+  end
+  defp stop_broadcaster(%S{ broadcaster: broadcaster } = state) do
+    Logger.info "Stopping broadcaster"
+    Janis.Broadcaster.stop_broadcaster(broadcaster)
+    %S{ state | broadcaster: nil }
   end
 
   defp dnssd_resolve({:browse, :add, {service_name, service_type, domain} = service}, %S{broadcaster: nil}) do
@@ -78,6 +88,7 @@ defmodule Janis.DNSSD do
   end
 
   defp start_and_link_broadcaster(address, port, config) do
+    Logger.info "Starting broadcaster #{ inspect address }:#{ port } [#{ inspect config }]"
     pid = case Janis.Broadcaster.start_broadcaster(address, port, config) do
       {:ok, pid} ->
         Process.monitor(pid)
