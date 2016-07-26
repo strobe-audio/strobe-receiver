@@ -3,7 +3,7 @@ defmodule Janis.Audio.PortAudio do
   use     Monotonic
   use     GenServer
 
-  @shared_lib  "portaudio"
+  @shared_lib  "janis"
   @packet_size 3528
 
   @sample_freq        Application.get_env(:janis, :sample_freq, 44100)

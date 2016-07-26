@@ -26,12 +26,12 @@ AUDIO_LIBS    = -L/usr/local/lib -lportaudio -lsamplerate
 STD_LIBS      = -lm
 
 HEADER_FILES = c_src
-SOURCE_FILES = c_src/portaudio.c c_src/pa_ringbuffer.c c_src/monotonic_time.c c_src/stream_statistics.c c_src/pid.c
+SOURCE_FILES = c_src/janis.c c_src/pa_ringbuffer.c c_src/monotonic_time.c c_src/stream_statistics.c c_src/pid.c
 
 MKDIR_P      = mkdir -p
 OBJECT_FILES = $(SOURCE_FILES:.c=.o)
 PRIV_DIR     = priv
-TARGET_LIB   = $(PRIV_DIR)/portaudio.so
+TARGET_LIB   = $(PRIV_DIR)/janis.so
 
 
 ifeq ($(OS), Darwin)

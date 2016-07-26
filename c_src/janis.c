@@ -1,4 +1,4 @@
-#include "portaudio.h"
+#include "janis.h"
 
 void playback_stopped(audio_callback_context *context) {
 	printf("Playback stopped...\r\n");
@@ -476,7 +476,7 @@ ErlDrvEntry example_driver_entry = {
 	NULL,		/* F_PTR output, called when erlang has sent */
 	NULL,			/* F_PTR ready_input, called when input descriptor ready */
 	NULL,			/* F_PTR ready_output, called when output descriptor ready */
-	"portaudio",		/* char *driver_name, the argument to open_port */
+	"janis",		/* char *driver_name, the argument to open_port */
 	NULL, //portaudio_drv_finish,			/* F_PTR finish, called when unloaded */
 	NULL,                       /* void *handle, Reserved by VM */
 	portaudio_drv_control,			/* F_PTR control, port_command callback */
