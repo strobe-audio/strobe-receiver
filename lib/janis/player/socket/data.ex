@@ -16,12 +16,7 @@ defmodule Janis.Player.Socket.Data do
     state
   end
 
-  defp data_in(state, data) do
-    << _c        ::size(64)-little-unsigned-integer,
-       timestamp ::size(64)-little-signed-integer,
-       audio     ::binary
-    >> = data
-
+  defp data_in(state, <<_c::size(64), timestamp::size(64)-little-signed-integer, audio::binary >>) do
     put(state, {timestamp, audio})
   end
 
