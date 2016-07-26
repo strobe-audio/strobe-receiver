@@ -41,11 +41,94 @@ Dependencies
 Running
 ------
 
+### Install
+
+- http://docs.emlid.com/navio/Downloads/Real-time-Linux-RPi2/
+
+- RPi audio software: http://rpi.autostatic.com/
+
+- Upgrade gcc:
+
+    ```bash
+    sudo apt-get install -y gcc-4.8
+    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.6
+    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 40 --slave /usr/bin/g++ g++ /usr/bin/g++-4.8
+    sudo update-alternatives --config gcc
+    ```
+
+- Erlang/OTP 18:
+  https://wtfleming.github.io/2015/12/10/embedded-elixir-raspberry-pi/
+
+    ```bash
+    apt-get install wget libssl-dev ncurses-dev m4 unixodbc-dev erlang-dev
+    wget http://www.erlang.org/download/otp_src_18.2.1.tar.gz
+    tar -xzvf otp_src_18.2.1.tar.gz
+    cd otp_src_18.2.1
+    ./configure --without-javac  --without-wx
+    make && sudo make install
+    ```
+
+- Elixir:
+
+    ```
+    wget https://github.com/elixir-lang/elixir/releases/download/v1.2.3/Precompiled.zip
+    sudo mkdir /usr/lib/elixir
+    cd /usr/lib/elixir/
+    sudo unzip /home/pi/Precompiled.zip
+    sudo bash -c "echo 'export PATH=/usr/lib/elixir/bin:${PATH}' > /etc/profile.d/elixir.sh"
+    ```
+
+
+- `/etc/asound.conf`:
+
+```
+pcm.!default {
+    type hw
+    # card can also be 0
+    card IQaudIODAC
+}
+
+ctl.!default {
+    type hw
+    # card can also be 0
+    card IQaudIODAC
+}
+```
+
+- `/etc/modprobe.d/alsa-blacklist.conf`:
+
+```
+blacklist snd_bcm2835
+```
+
+- Add i2c dac overlay:
+
+    `sudo vim /boot/config.txt`
+
+    add:
+
+    `dtoverlay=iqaudio-dacplus`
+
+- `/etc/modules`
+
+    ```
+    #snd-bcm2835
+    i2c-dev
+    spi-dev
+    snd_soc_pcm512x_i2c
+    snd_soc_iqaudio_dac
+    ```
+
+- Add the user to the audio group: `sudo usermod -a -G audio $USER`
+
+
+
 ### Linux
 
 Use chrt to use a Round-robin scheduler by default (plus running as root enables the fifo scheduler for the audio thread)
 
     make && sudo chrt --rr 99  /home/garry/elixir-current/bin/iex -S /home/garry/elixir-current/bin/mix
+    make && sudo chrt --rr 99  /usr/lib/elixir/bin/iex -S /usr/lib/elixir/bin/mix
 
 Running the entire app as fifo seems like a good idea but seems to lead to madness -- perhaps because the receiver starves the rest of the system of processor time (?). Things stop working anyway.
 
