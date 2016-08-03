@@ -22,8 +22,87 @@ git clone https://github.com/nerves-project/nerves_system_rpi3.git
 cd nerves_system_br
 bash ./create-build.sh ../nerves_system_rpi3/nerves_defconfig ../NERVES_SYSTEM
 cd ../NERVES_SYSTEM
+
+```
+
+See: http://stackoverflow.com/questions/1414968/how-do-i-configure-the-linux-kernel-within-buildroot
+
+```
+make linux-menuconfig
+```
+
+Device drivers:
+  Device tree and Open Firmware support:
+    [X] Device tree overlays
+  Sound card support:
+    <*> Advanced Linux Sound Architecture:
+      <M> ALSA for SoC audio support:
+        <M> SoC Audio support for the Broadcom BCM2708 I2S module
+        <M> Support for HifiBerry DAC
+        <M> Support for HifiBerry DAC+
+        <M> Support for HifiBerry
+        <M> Support for the HifiBerry
+        <M> Support for RPi-DAC
+        < > Support for Rpi-PROTO (NEW)
+        <M> Support for IQaudIO-DAC
+        <M> Support for RaspiDAC Rev.3x
+        <M> Synopsys I2S Device Driver
+
+<Save> .audio-config
+
+`find . -name .audio-config`
+
+will go into `./build/linux-<sha>/.audio-config`
+
+`cp ./build/linux-<sha>/.audio-config ../nerves_system_rpi3/linux-4.1-audio.defconfig`
+
+```
 make menuconfig
 ```
+set the following options:
+
+kernel:
+  kernel configuration using a custom (def)config file:
+    (${NERVES_DEFCONFIG_DIR}/linux-4.1-audio.defconfig) Configuration file path
+  linux kernel extensions:
+    [ ] adeos/Xenomai Real-time patch
+
+target packages:
+  [X] Show packages that are also provided by busybox
+      Audio and video applications:
+        [X] alsa-utils
+            [X] alsaconf
+            [X] alsactl
+            [X] alsamixer
+            [X] aplay/arecord
+      Hardware handling:
+        [X] i2c-tools
+      Libraries:
+        Audio/Sound:
+          [X] alsa-lib
+          [X] libsamplerate
+          [X] portaudio
+            [X] alsa support
+        Text and terminal handling:
+          [X] ncurses programs *DEV*
+          [X] readline *DEV*
+        Networking applications:
+          [X] shairport-sync
+        Shell and utilities:
+          [X] bash *DEV*
+          [X] which *DEV*
+        System tools:
+          [X] htop *DEV*
+        Text editors and viewers:
+          [X] vim *DEV*
+      Networking applications:
+          [X] avahi
+          [X]   mDNS/DNS-SD daemon
+          [X]     libdns_sd compatibility (Bonjour)
+
+<Save> -> /path/to/NERVES\_SYSTEM/.config
+
+
 
 # you have to do something along the lines of
 
