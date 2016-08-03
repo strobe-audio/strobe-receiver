@@ -10,6 +10,10 @@ defmodule NervesJanis do
     children = [
       # worker(NervesJanis.Worker, [arg1, arg2, arg3]),
       worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
+      # worker(NervesJanis.Dbus.Uuidgen, []),
+      worker(NervesJanis.Dbus, []),
+      worker(NervesJanis.Avahi, []),
+      # supervisor(Janis.Supervisor, []),
     ]
 
 

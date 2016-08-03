@@ -14,6 +14,7 @@ enable_uart=1
 
 # Enable I2C and SPI
 dtparam=spi=on
+dtparam=i2s=on
 dtparam=i2c_arm=on
 gpu_mem=128
 

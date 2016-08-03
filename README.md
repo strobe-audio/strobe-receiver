@@ -33,7 +33,7 @@ make linux-menuconfig
 
 Device drivers:
   Device tree and Open Firmware support:
-    [X] Device tree overlays
+    [*] Device tree overlays
   Sound card support:
     <*> Advanced Linux Sound Architecture:
       <M> ALSA for SoC audio support:
@@ -67,38 +67,47 @@ kernel:
   linux kernel extensions:
     [ ] adeos/Xenomai Real-time patch
 
+system configuration:
+  Init system:
+    [*] System V
+    () Network interface to configure through DHCP
+
 target packages:
-  [X] Show packages that are also provided by busybox
+  [*] Show packages that are also provided by busybox
       Audio and video applications:
-        [X] alsa-utils
-            [X] alsaconf
-            [X] alsactl
-            [X] alsamixer
-            [X] aplay/arecord
+        [*] alsa-utils
+            [*] alsaconf
+            [*] alsactl
+            [*] alsamixer
+            [*] aplay/arecord
       Hardware handling:
-        [X] i2c-tools
+        [*] i2c-tools
       Libraries:
         Audio/Sound:
-          [X] alsa-lib
-          [X] libsamplerate
-          [X] portaudio
-            [X] alsa support
+          [*] alsa-lib
+          [*] libsamplerate
+          [*] portaudio
+            [*] alsa support
+        Hardware handling:
+          [*] libftdi
+          [*]   C++ bindings
+          [*] libftdi1
         Text and terminal handling:
-          [X] ncurses programs *DEV*
-          [X] readline *DEV*
+          [*] ncurses programs *DEV*
+          [*] readline *DEV*
         Networking applications:
-          [X] shairport-sync
+          [*] shairport-sync
         Shell and utilities:
-          [X] bash *DEV*
-          [X] which *DEV*
+          [*] bash *DEV*
+          [*] which *DEV*
         System tools:
-          [X] htop *DEV*
+          [*] htop *DEV*
         Text editors and viewers:
-          [X] vim *DEV*
+          [*] vim *DEV*
       Networking applications:
-          [X] avahi
-          [X]   mDNS/DNS-SD daemon
-          [X]     libdns_sd compatibility (Bonjour)
+          [*] avahi
+          [*]   mDNS/DNS-SD daemon
+          [*]     libdns_sd compatibility (Bonjour)
 
 <Save> -> /path/to/NERVES\_SYSTEM/.config
 
