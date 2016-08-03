@@ -3,27 +3,29 @@
 .SUFFIXES: .o .c
 
 OS=${shell uname}
-CC=gcc
+CC ?= $(CROSSCOMPILE)gcc
 CXX=g++
 OPTIMIZE=-Ofast
-CFLAGS=-Wall -std=c99 -g -pedantic -Wno-comment -Wextra -fPIC -march=native
+CFLAGS ?= -Wall -g -pedantic -Wno-comment -Wextra
+CFLAGS += -std=gnu99 -fPIC
+#-march=native
 
-#echo $(ERLANG_PATH)
+#echo $(ERL_PATH)
 # Erlang
-ERLANG_PATH = $(shell erl -eval 'io:format("~s", [lists:concat([code:root_dir(), "/erts-", erlang:system_info(version) ])])' -s init stop -noshell)
+ERL_PATH ?= $(shell erl -eval 'io:format("~s", [lists:concat([code:root_dir(), "/erts-", erlang:system_info(version) ])])' -s init stop -noshell)
 
 
-ERL_INCLUDE = -I$(ERLANG_PATH)/include
-ERL_LIBS    = -L$(ERLANG_PATH)/lib \
+ERL_CFLAGS ?= -I$(ERL_PATH)/include
+ERL_LIBS    = -L$(ERL_PATH)/lib \
 							-lerts
-EI_INCLUDE  = -I$(ERLANG_PATH)/../usr/include
-EI_LIBS     = -L$(ERLANG_PATH)/../usr/lib \
+EI_INCLUDE  = -I$(ERL_PATH)/../usr/include
+EI_LIBS     = -L$(ERL_PATH)/../usr/lib \
 							-lei \
 							-lerl_interface
 AUDIO_INCLUDE = -I/usr/local/include -I/usr/include
 AUDIO_LIBS    = -L/usr/local/lib -lportaudio -lsamplerate
 
-STD_LIBS      = -lm
+LDFLAGS      += -lm
 
 HEADER_FILES = c_src
 SOURCE_FILES = c_src/janis.c c_src/pa_ringbuffer.c c_src/monotonic_time.c c_src/stream_statistics.c c_src/pid.c
@@ -50,11 +52,11 @@ default: all
 all: directories $(TARGET_LIB)
 
 .c.o:
-	$(CC) $(CFLAGS) $(OPTIMIZE) $(ERL_INCLUDE) $(EI_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
+	$(CC) $(CFLAGS) -fPIC $(OPTIMIZE) $(ERL_CFLAGS) $(EI_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
 
 $(TARGET_LIB): $(OBJECT_FILES)
 	@echo $(ERLANG_PATH)
-	$(CC) -o $@ $^ $(ERL_INCLUDE) $(ERL_LIBS) $(EI_LIBS) $(AUDIO_LIBS) $(STD_LIBS) $(EXTRA_OPTIONS) -fPIC $(OPTIMIZE)
+	$(CC) -o $@ $^ $(ERL_CFLAGS) $(ERL_LIBS) $(EI_LIBS) $(AUDIO_LIBS) $(LDFLAGS) $(EXTRA_OPTIONS) $(OPTIMIZE) -fPIC
 
 program: $(OBJECT_FILES)
 
