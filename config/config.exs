@@ -5,6 +5,11 @@
 # is restricted to this project.
 use Mix.Config
 
+# TODO: make the additions configurable per DAC
+config :nerves, :firmware,
+  rootfs_additions: "config/rootfs/iqaudiodac",
+  fwup_conf: "config/fwup.conf"
+
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations

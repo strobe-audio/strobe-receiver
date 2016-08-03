@@ -9,9 +9,9 @@ defmodule NervesJanis do
     # Define workers and child supervisors to be supervised
     children = [
       # worker(NervesJanis.Worker, [arg1, arg2, arg3]),
+      worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
     ]
 
-    start_networking(:os.type, :eth0)
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
@@ -19,8 +19,8 @@ defmodule NervesJanis do
     Supervisor.start_link(children, opts)
   end
 
-  defp start_networking({:unix, :darwin}, _iface), do: :ok
-  defp start_networking(_os, iface) when os in  do
-    {:ok, _} = Nerves.Networking.setup iface
+  def start_networking({:unix, :darwin}, _iface), do: :ok
+  def start_networking(_os, iface)  do
+    {:ok, _} = Nerves.Networking.setup iface, [mode: "dhcp"]
   end
 end

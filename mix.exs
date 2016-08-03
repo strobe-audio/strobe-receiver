@@ -13,7 +13,8 @@ defmodule NervesJanis.Mixfile do
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      aliases: aliases,
-     deps: deps ++ system(@target)]
+     deps: deps ++ system(@target)
+   ]
   end
 
   # Configuration for the OTP application.
@@ -21,13 +22,21 @@ defmodule NervesJanis.Mixfile do
   # Type `mix help compile.app` for more information.
   def application do
     [mod: {NervesJanis, []},
-     applications: [:logger, :nerves_networking, :janis]]
+     applications: [
+       :logger,
+       :nerves,
+       :nerves_networking,
+       :nerves_lib,
+       :nerves_system_rpi3,
+       :janis,
+     ]]
   end
 
   def deps do
     [{:nerves, "~> 0.3.0"},
+     {:nerves_lib, github: "nerves-project/nerves_lib"},
      {:nerves_networking, github: "nerves-project/nerves_networking"},
-     {:janis, path: "/Users/garry/Seafile/Peep/janis"},
+     {:janis, git: "git@gitlab.com:magnetised/janis.git"},
     ]
   end
 

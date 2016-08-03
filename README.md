@@ -34,3 +34,14 @@ apt-get install build-essential python python3 curl wget
 when you are running `mix firmware` you are going to need to set an environment variable. if you have a bash type shell do: `export NERVES_SYSTEM=~/nerves_build/NERVES_SYSTEM`
 
 
+#
+
+No need for nerves_uart. You just need to change the erlinit.config file to output the iex prompt through the serial port and run picocom or some other com port terminal program on your laptop.
+
+[2:47]
+For the Raspberry Pi 2, the erlinit.config file should reference ttyAMA0 instead of tty1. We should probably document it better, but if you look at the system's README.md file, it kind of says that: https://github.com/nerves-project/nerves_system_rpi2
+
+Actually, if you forget about this, `erlinit` prints what you need to do out the serial port.
+
+
+You can get shell access by adding `--run-on-exit /bin/sh` to your erlinit.config file and then exiting iex by CTRL-C, CTRL-C or any other means.
