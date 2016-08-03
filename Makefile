@@ -16,14 +16,15 @@ ERL_PATH ?= $(shell erl -eval 'io:format("~s", [lists:concat([code:root_dir(), "
 
 
 ERL_CFLAGS ?= -I$(ERL_PATH)/include
-ERL_LIBS    = -L$(ERL_PATH)/lib \
-							-lerts
+ERL_EI_LIBDIR ?= $(ERL_PATH)/usr/lib
+ERL_LDFLAGS ?= -L$(ERL_EI_LIBDIR) -lei -lerl_interface
+# ERL_LIBS    = -L$(ERL_PATH)/lib \
+# 							-lerts
 EI_INCLUDE  = -I$(ERL_PATH)/../usr/include
-EI_LIBS     = -L$(ERL_PATH)/../usr/lib \
-							-lei \
-							-lerl_interface
-AUDIO_INCLUDE = -I/usr/local/include -I/usr/include
-AUDIO_LIBS    = -L/usr/local/lib -lportaudio -lsamplerate
+
+# AUDIO_INCLUDE = -I/usr/local/include -I/usr/include
+# AUDIO_LIBS    = -L/usr/local/lib -lportaudio -lsamplerate
+AUDIO_LIBS    = -lportaudio -lsamplerate
 
 LDFLAGS      += -lm
 
@@ -52,11 +53,11 @@ default: all
 all: directories $(TARGET_LIB)
 
 .c.o:
-	$(CC) $(CFLAGS) -fPIC $(OPTIMIZE) $(ERL_CFLAGS) $(EI_INCLUDE) $(AUDIO_INCLUDE) -o $@ -c $<
+	$(CC) $(CFLAGS) -fPIC $(OPTIMIZE) $(ERL_CFLAGS) $(EI_INCLUDE) -o $@ -c $<
 
 $(TARGET_LIB): $(OBJECT_FILES)
 	@echo $(ERLANG_PATH)
-	$(CC) -o $@ $^ $(ERL_CFLAGS) $(ERL_LIBS) $(EI_LIBS) $(AUDIO_LIBS) $(LDFLAGS) $(EXTRA_OPTIONS) $(OPTIMIZE) -fPIC
+	$(CC) -o $@ $^ $(ERL_CFLAGS) $(ERL_EI_LIBDIR) $(ERL_LDFLAGS) $(AUDIO_LIBS) $(LDFLAGS) $(EXTRA_OPTIONS) $(OPTIMIZE) -fPIC
 
 program: $(OBJECT_FILES)
 
