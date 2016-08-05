@@ -10,7 +10,10 @@ defmodule Janis.Supervisor do
       supervisor(Janis.Broadcaster, []),
       supervisor(Janis.Broadcaster.Monitor.Collector, []),
       worker(Janis.Audio, []),
-      worker(Janis.DNSSD, [])
+      worker(Janis.DNSSD, []),
+      worker(Janis.SSDP, []),
+      worker(GenEvent, [[name: Janis.Broadcaster.Event]]),
+      worker(Janis.Broadcaster.Event, [Janis.Broadcaster.Event])
     ]
     supervise(children, strategy: :one_for_one)
   end

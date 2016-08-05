@@ -30,11 +30,13 @@ defmodule Janis.DNSSD do
   def handle_info({:dnssd, _ref, msg}, state) do
     state = case dnssd_resolve(msg, state) do
       {:ok, broadcaster} ->
+        GenEvent.notify(Janis.Broadcaster.Event, {:online, :dnssd, broadcaster})
         Logger.info "Broadcaster up #{ inspect broadcaster}"
         %S{ state | broadcaster: broadcaster }
       :down ->
         Logger.warn "Broadcaster service offline"
-        stop_broadcaster(state)
+        GenEvent.notify(Janis.Broadcaster.Event, {:offline, :dnssd, state.broadcaster})
+        %S{ state | broadcaster: nil }
       {:conflict, event} ->
         Logger.warn "Multiple broadcasters on network, ignoring #{ to_string(event) }..."
         state
@@ -42,61 +44,22 @@ defmodule Janis.DNSSD do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, _ref, :process, broadcaster, reason}, %S{broadcaster: broadcaster} = state) do
-    Logger.warn "Broadcaster terminated #{ inspect reason }"
-    {:noreply, %S{state | broadcaster: nil}}
-  end
-
-  defp stop_broadcaster(%S{ broadcaster: nil } = state) do
-    Logger.info "Broadcaster already stopped..."
-    state
-  end
-  defp stop_broadcaster(%S{ broadcaster: broadcaster } = state) do
-    Logger.info "Stopping broadcaster"
-    Janis.Broadcaster.stop_broadcaster(broadcaster)
-    %S{ state | broadcaster: nil }
-  end
-
   defp dnssd_resolve({:browse, :add, {service_name, service_type, domain} = service}, %S{broadcaster: nil}) do
     :dnssd.resolve_sync(service_name, service_type, domain)
-    |> resource(service)
+    |> broadcaster(service)
   end
   defp dnssd_resolve({:browse, :add, _service}, _state) do
     {:conflict, :add}
   end
 
-  defp dnssd_resolve({:browse, :remove, _service}, %S{broadcaster: nil}) do
+  defp dnssd_resolve({:browse, :remove, _service}, state) do
     :down
   end
-  # We're getting a service removal message when our broadcaster is still alive
-  # so it's likely a case of multiple broadcasters on the same network.
-  defp dnssd_resolve({:browse, :remove, _service}, %S{broadcaster: broadcaster}) do
-    case Process.alive?(broadcaster) do
-      true  -> {:conflict, :remove}
-      false -> :down
-    end
-  end
 
-  defp resource({:ok, {address, port, texts}}, _service) do
+  defp broadcaster({:ok, {address, port, texts}}, _service) do
     config = parse_texts(texts)
-    Logger.info "Got resource #{address}:#{port} #{inspect config}"
-    start_and_link_broadcaster(address, port, config)
-  end
-
-  defp resource({:error, :timeout}, service) do
-    Logger.warn "Timed out getting resource #{inspect service}"
-  end
-
-  defp start_and_link_broadcaster(address, port, config) do
-    Logger.info "Starting broadcaster #{ inspect address }:#{ port } [#{ inspect config }]"
-    pid = case Janis.Broadcaster.start_broadcaster(address, port, config) do
-      {:ok, pid} ->
-        Process.monitor(pid)
-        pid
-      {:error, {:already_started, pid}} ->
-        pid
-    end
-    {:ok, pid}
+    broadcaster = struct(%Janis.Broadcaster{host: address, port: port}, config) |> Janis.Broadcaster.resolve
+    {:ok, broadcaster}
   end
 
   defp parse_texts(texts) do

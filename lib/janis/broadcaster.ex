@@ -5,7 +5,7 @@ defmodule Janis.Broadcaster do
   @child_name Janis.Broadcaster
 
   defstruct [
-    :hostname,
+    :host,
     :port,
     :ip,
     :ctrl_port,
@@ -20,12 +20,18 @@ defmodule Janis.Broadcaster do
     Supervisor.start_link(__MODULE__, :ok, name: @supervisor_name)
   end
 
-  def start_broadcaster(hostname, port, config) do
-    start_broadcaster(@supervisor_name, hostname, port, config)
+  def start_broadcaster(%Broadcaster{} = broadcaster) do
+    start_broadcaster(@supervisor_name, broadcaster)
+  end
+  def start_broadcaster(host, port, config) do
+    start_broadcaster(@supervisor_name, host, port, config)
   end
 
-  def start_broadcaster(supervisor, hostname, port, config) do
-    Supervisor.start_child(supervisor, [new(hostname, port, config)])
+  def start_broadcaster(supervisor, %Broadcaster{} = broadcaster) do
+    Supervisor.start_child(supervisor, [broadcaster])
+  end
+  def start_broadcaster(supervisor, host, port, config) do
+    start_broadcaster(supervisor, new(host, port, config))
   end
 
   def stop_broadcaster(service) do
@@ -62,13 +68,16 @@ defmodule Janis.Broadcaster do
     supervise(children, strategy: :simple_one_for_one)
   end
 
-  def new(hostname, port, config) do
-    {:ok, ip} = Janis.Network.lookup(hostname)
+  def new(host, port, config) do
     struct(%Broadcaster{
-      hostname: hostname,
-      ip: ip,
+      host: host,
       port: port
-    }, config)
+    }, config) |> resolve
+  end
+
+  def resolve(broadcaster) do
+    {:ok, ip} = Janis.Network.lookup(broadcaster.host)
+    %Broadcaster{ broadcaster | ip: ip }
   end
 
   def stream_interval_ms(broadcaster) do
