@@ -1,13 +1,16 @@
+dtdebug=1
 kernel=zImage
 
 # This, along with the Raspberry Pi "x" firmware is need for the camera
 # to work. See Target packages->Hardware handling->Firmware for "x" firmware.
-# gpu_mem=128
+gpu_mem=128
 
 # Comment this in or modify to enable OneWire
 # NOTE: check that the overlay that you specify is in the boot partition or
 #       this won't work.
-#dtoverlay=w1-gpio-pullup,gpiopin=4
+# dtoverlay=w1-gpio-pullup,gpiopin=4
+# device_tree_overlay=overlays/w1-gpio-pullup-overlay.dtb,gpiopin=4
+
 
 # Enable the UART (/dev/ttyS0) on the RPi3.
 enable_uart=1
@@ -16,9 +19,19 @@ enable_uart=1
 dtparam=spi=on
 dtparam=i2s=on
 dtparam=i2c_arm=on
-gpu_mem=128
 
-dtoverlay=iqaudio-dacplus
-dtoverlay=i2s-mmap
+# dtoverlay=i2c0-bcm2708
+# dtoverlay=i2c1-bcm2708
+# dtoverlay=i2s-mmap
+# dtoverlay=iqaudio-dacplus
+# dtoverlay=spi-bcm2708
+# dtoverlay=spi-bcm2835
 
 
+# device_tree_overlay=overlays/i2c0-bcm2708-overlay.dtb
+# device_tree_overlay=overlays/i2c1-bcm2708-overlay.dtb
+# device_tree_overlay=overlays/i2s-mmap-overlay.dtb
+# device_tree_overlay=overlays/spi-bcm2708-overlay.dtb
+# device_tree_overlay=overlays/spi-bcm2835-overlay.dtb
+
+device_tree_overlay=overlays/iqaudio-dacplus-overlay.dtb

@@ -1,6 +1,0 @@
-#snd-bcm2835
-i2c-dev
-spi-dev
-snd_soc_pcm512x_i2c
-snd_soc_iqaudio_dac
-

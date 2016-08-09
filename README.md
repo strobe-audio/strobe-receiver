@@ -32,21 +32,30 @@ make linux-menuconfig
 ```
 
 Device drivers:
+  I2C support  --->
+    <*> I2C support
+      I2C Hardware Bus support:
+        <*> BCM2708 BSC
+        < > Broadcom BCM2835 I2C controller
   Device tree and Open Firmware support:
     [*] Device tree overlays
   Sound card support:
     <*> Advanced Linux Sound Architecture:
-      <M> ALSA for SoC audio support:
-        <M> SoC Audio support for the Broadcom BCM2708 I2S module
-        <M> Support for HifiBerry DAC
-        <M> Support for HifiBerry DAC+
-        <M> Support for HifiBerry
-        <M> Support for the HifiBerry
-        <M> Support for RPi-DAC
+      <*> ALSA for SoC audio support:
+        <*> SoC Audio support for the Broadcom BCM2708 I2S module
+        <*> Support for HifiBerry DAC
+        <*> Support for HifiBerry DAC+
+        <*> Support for HifiBerry
+        <*> Support for the HifiBerry
+        <*> Support for RPi-DAC
         < > Support for Rpi-PROTO (NEW)
-        <M> Support for IQaudIO-DAC
-        <M> Support for RaspiDAC Rev.3x
-        <M> Synopsys I2S Device Driver
+        <*> Support for IQaudIO-DAC
+        <*> Support for RaspiDAC Rev.3x
+        <*> Synopsys I2S Device Driver
+        CODEC drivers:
+          -*- Texas Instruments PCM512x CODECs - I2C
+          <*> Texas Instruments PCM512x CODECs - SPI
+        <*>   ASoC Simple sound card support
 
 <Save> .audio-config
 
@@ -102,6 +111,9 @@ target packages:
           [*] which *DEV*
         System tools:
           [*] htop *DEV*
+          util-linux:
+            [*]     schedutils
+            [*]     setpriv
         Text editors and viewers:
           [*] vim *DEV*
       Networking applications:
@@ -109,9 +121,12 @@ target packages:
           [*]   mDNS/DNS-SD daemon
           [*]     libdns_sd compatibility (Bonjour)
 
+    System tools:
 <Save> -> /path/to/NERVES\_SYSTEM/.config
 
 
+Also in `nerves_system_br/board/nerves-common/busybox-1.22.config` look for `CHRT` and set the configuration to 'y'
+-- this needs to be in the git repo somehow.
 
 # you have to do something along the lines of
 
