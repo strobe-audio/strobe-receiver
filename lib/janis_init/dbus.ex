@@ -1,4 +1,4 @@
-defmodule NervesAvahi.Dbus do
+defmodule JanisInit.Dbus do
   require Logger
   def start_link() do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)

@@ -1,4 +1,4 @@
-defmodule NervesAvahi.Alsa do
+defmodule JanisInit.Alsa do
   require Logger
 
   def start_link() do

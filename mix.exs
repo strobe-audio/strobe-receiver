@@ -1,8 +1,8 @@
-defmodule NervesAvahi.Mixfile do
+defmodule JanisInit.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :nerves_avahi,
+    [app: :janis_init,
      version: "0.1.0",
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
@@ -15,7 +15,7 @@ defmodule NervesAvahi.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     [applications: [:logger, :nerves_networking, :porcelain],
-     mod: {NervesAvahi, []}]
+     mod: {JanisInit, []}]
   end
 
   # Dependencies can be Hex packages:

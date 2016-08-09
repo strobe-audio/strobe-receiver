@@ -1,4 +1,4 @@
-defmodule NervesAvahi.Chrt do
+defmodule JanisInit.Chrt do
   require Logger
 
   def start_link() do

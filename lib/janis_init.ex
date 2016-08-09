@@ -1,4 +1,4 @@
-defmodule NervesAvahi do
+defmodule JanisInit do
   use Application
   require Logger
 
@@ -9,16 +9,16 @@ defmodule NervesAvahi do
 
     # Define workers and child supervisors to be supervised
     children = [
-      worker(NervesAvahi.Alsa, []),
+      worker(JanisInit.Alsa, []),
       worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
-      # worker(NervesAvahi.Dbus, []),
-      worker(NervesAvahi.Avahi, []),
-      worker(NervesAvahi.Chrt, [], restart: :transient),
+      # worker(JanisInit.Dbus, []),
+      worker(JanisInit.Avahi, []),
+      worker(JanisInit.Chrt, [], restart: :transient),
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: NervesAvahi.Supervisor]
+    opts = [strategy: :one_for_one, name: JanisInit.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
