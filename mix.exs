@@ -25,10 +25,9 @@ defmodule NervesJanis.Mixfile do
      applications: [
        :logger,
        :nerves,
-       # :nerves_networking,
        :nerves_lib,
        :nerves_system_rpi3,
-       :nerves_avahi,
+       :janis_init,
        :janis,
      ]]
   end
@@ -38,7 +37,7 @@ defmodule NervesJanis.Mixfile do
      {:nerves_lib, github: "nerves-project/nerves_lib"},
      {:nerves_networking, github: "nerves-project/nerves_networking"},
      {:janis, git: "git@gitlab.com:magnetised/janis.git"},
-     {:nerves_avahi, path: "/home/garry/nerves_avahi"},
+     {:janis_init, git: "git@gitlab.com:magnetised/janis_init.git"},
     ]
   end
 
