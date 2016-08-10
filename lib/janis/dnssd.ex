@@ -58,7 +58,7 @@ defmodule Janis.DNSSD do
     {:conflict, :add}
   end
 
-  defp dnssd_resolve({:browse, :remove, _service}, state) do
+  defp dnssd_resolve({:browse, :remove, _service}, _state) do
     :down
   end
 
