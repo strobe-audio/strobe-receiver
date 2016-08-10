@@ -9,6 +9,7 @@ defmodule JanisInit do
 
     # Define workers and child supervisors to be supervised
     children = [
+      worker(JanisInit.Cpu, [], restart: :transient),
       worker(JanisInit.Alsa, []),
       worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
       # worker(JanisInit.Dbus, []),
