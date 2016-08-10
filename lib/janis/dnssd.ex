@@ -17,7 +17,13 @@ defmodule Janis.DNSSD do
 
   def init(:ok) do
     Process.flag(:trap_exit, true)
-    {:ok, browser} = :dnssd.browse(@service_name)
+    browser = case IO.inspect(:dnssd.browse(@service_name)) do
+      {:ok, browser} ->
+        browser
+      {:error, error} ->
+        Logger.warn "Unable to start DNSSD browser: Error #{error}"
+        nil
+    end
     {:ok, %S{browser: browser}}
   end
 
