@@ -1,7 +1,7 @@
 #ifndef __JANIS__
 #define __JANIS__ 1
 // see http://man7.org/linux/man-pages/man3/endian.3.html
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
