@@ -76,11 +76,6 @@ kernel:
   linux kernel extensions:
     [ ] adeos/Xenomai Real-time patch
 
-system configuration:
-  Init system:
-    [*] System V
-    () Network interface to configure through DHCP
-
 target packages:
   [*] Show packages that are also provided by busybox
       Audio and video applications:
@@ -90,6 +85,9 @@ target packages:
             [*] alsamixer
             [*] aplay/arecord
       Hardware handling:
+        Firmware:
+          [*]   Install DTB overlays
+          [*]   vcdbg
         [*] i2c-tools
       Libraries:
         Audio/Sound:
@@ -127,6 +125,10 @@ target packages:
 
 Also in `nerves_system_br/board/nerves-common/busybox-1.22.config` look for `CHRT` and set the configuration to 'y'
 -- this needs to be in the git repo somehow.
+
+To debug overlays:
+
+vcdbg log msg
 
 # you have to do something along the lines of
 

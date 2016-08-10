@@ -26,7 +26,7 @@ defmodule NervesJanis.Mixfile do
        :logger,
        :nerves,
        :nerves_lib,
-       :nerves_system_rpi3,
+       :"nerves_system_#{@target}",
        :janis_init,
        :janis,
      ]]
@@ -37,7 +37,8 @@ defmodule NervesJanis.Mixfile do
      {:nerves_lib, github: "nerves-project/nerves_lib"},
      {:nerves_networking, github: "nerves-project/nerves_networking"},
      {:janis, git: "git@gitlab.com:magnetised/janis.git"},
-     {:janis_init, git: "git@gitlab.com:magnetised/janis_init.git"},
+     # {:janis_init, git: "git@gitlab.com:magnetised/janis_init.git"},
+     {:janis_init, path: "/home/garry/janis_init"},
     ]
   end
 

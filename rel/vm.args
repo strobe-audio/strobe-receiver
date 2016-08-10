@@ -1,4 +1,5 @@
 ## Start the Elixir shell
 -noshell
--user Elixir.IEx.CLI
--extra --no-halt
+#-user Elixir.IEx.CLI
+-extra --no-halt --erl "+K true" --erl "-smp auto"  --erl "+scl false"  --erl "+spp true"  --erl "+swt low"  --erl "+sbwt long"
+
