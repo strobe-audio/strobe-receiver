@@ -21,7 +21,7 @@ defmodule Janis.Mixfile do
   #
   # Type `mix help compile.app` for more information
   def application do
-    [applications: [:logger, :monotonic, :dnssd],
+    [applications: [:logger, :monotonic, :uuid, :poison, :dnssd, :nerves_ssdp_client],
      mod: {Janis, []}]
   end
 
