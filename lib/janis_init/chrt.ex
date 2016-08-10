@@ -18,7 +18,7 @@ defmodule JanisInit.Chrt do
     "#{executable()} #{Enum.join(args, " ")}"
   end
   def args do
-    ["-r", "-p", "99", :os.getpid()]
+    ["-f", "-p", "99", :os.getpid()]
   end
   def executable do
     System.find_executable("chrt")
