@@ -6,7 +6,7 @@ OS=${shell uname}
 CC ?= $(CROSSCOMPILE)gcc
 CXX=g++
 OPTIMIZE=-Ofast
-CFLAGS ?= -Wall -g -pedantic -Wno-comment -Wextra
+CFLAGS ?= -Wall -g -pthread -pedantic -Wno-comment -Wextra -DUSE_PTHREAD
 CFLAGS += -std=gnu99 -fPIC
 #-march=native
 

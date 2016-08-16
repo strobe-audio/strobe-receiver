@@ -1,5 +1,12 @@
 #include "janis.h"
 
+
+// Not worth making this work on os x..
+#ifndef __APPLE__
+// Have we set cpu affinity & scheduling for our audio thread yet?
+static bool has_cpu_affinity = false;
+#endif // __APPLE__
+
 void playback_stopped(audio_callback_context *context) {
 	printf("Playback stopped...\r\n");
 	context->playing     = false;
@@ -151,6 +158,7 @@ static inline void send_packet(audio_callback_context *context,
 	if (context->frame_count > SAMPLE_RATE && llabs(packet_offset) > 500) {
 		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
+		printf("pid: %d\r\n", getpid());
 		printf ("> % 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.2f, %.2f, %.2f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
 	}
 
@@ -170,6 +178,27 @@ static int audio_callback(const void* _input,
 	UNUSED(_input);
 	UNUSED(_statusFlags);
 
+#ifndef __APPLE__
+	if (!has_cpu_affinity) {
+		has_cpu_affinity = true;
+
+		cpu_set_t cpus;
+		struct sched_param sched_param;
+		sched_param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+
+		int processor_count = sysconf(_SC_NPROCESSORS_ONLN);
+
+		printf("=== Setting cpu affinity: CPU %d/%d SCHED_FIFO %d\r\n", processor_count, processor_count, sched_param.sched_priority);
+
+		pthread_t current_thread = pthread_self();
+
+		CPU_ZERO(&cpus);
+		CPU_SET(processor_count - 1, &cpus);
+
+		pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpus);
+		pthread_setschedparam(current_thread, SCHED_FIFO, &sched_param);
+	}
+#endif // __APPLE__
 
 	if (context->stopped) {
 		// remove all things from the ring buffer

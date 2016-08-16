@@ -2,6 +2,7 @@
 #define __JANIS__ 1
 // see http://man7.org/linux/man-pages/man3/endian.3.html
 #define _DEFAULT_SOURCE
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +15,10 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
 
+#include <pthread.h>
 
 #include <erl_driver.h>
 #include <ei.h>
