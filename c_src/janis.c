@@ -135,6 +135,9 @@ static inline void send_packet(audio_callback_context *context,
 	control = MIN(control, MAX_RESAMPLE_RATIO);
 	resample_ratio = 1.0 - control;
 
+	// tell src not to smoothly transition to the new resample ratio
+	src_set_ratio(context->resampler, resample_ratio);
+
 	unsigned long frames = (unsigned long)src_callback_read(context->resampler, resample_ratio, frameCount, out);
 
 	if (frames < frameCount) {
