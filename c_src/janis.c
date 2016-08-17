@@ -157,8 +157,11 @@ static inline void send_packet(audio_callback_context *context,
 		}
 	}
 
-	// debug every ~1s
-	if (context->frame_count > SAMPLE_RATE && llabs(packet_offset) > 500) {
+	// debug at most every ~1s & only then once an individual packet's offset >
+	// this threshold.
+	const int64_t debug_threshold_us = 100; // µs
+
+	if (context->frame_count > SAMPLE_RATE && llabs(packet_offset) > debug_threshold_us) {
 		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
 		printf ("> % 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.2f, %.2f, %.2f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
