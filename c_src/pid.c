@@ -29,3 +29,9 @@ double pid_control(
 	pid->t = time;
 	return output/1000000.0;
 }
+
+void pid_reset(pid_state_t *pid) {
+	pid->t = 0.;
+	pid->previous_error = 0.;
+	pid->integral = 0.;
+}

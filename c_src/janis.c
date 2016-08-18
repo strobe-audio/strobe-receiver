@@ -12,6 +12,7 @@ void playback_stopped(audio_callback_context *context) {
 	context->playing     = false;
 	context->frame_count = (uint64_t)0;
 	src_reset(context->resampler);
+	pid_reset(&context->pid);
 	stream_stats_reset(context->timestamp_offset_stats);
 }
 
@@ -348,7 +349,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
 
-	pid_init(&context->pid, 2.0, 1.0, 0.000);
+	pid_init(&context->pid, 2.0, 0.0, 0.001);
 
 	stream_stats_init(context->timestamp_offset_stats, 0.0001);
 
