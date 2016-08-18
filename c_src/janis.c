@@ -107,9 +107,10 @@ static inline void send_packet(audio_callback_context *context,
 	uint64_t output_time;
 	uint64_t packet_time;
 
+	output_time = stream_time_to_absolute_time(context, now, timeInfo);
+	packet_time = packet_output_absolute_time(context->active_packet);
+
 	if (context->playing == false) {
-		output_time = stream_time_to_absolute_time(context, now, timeInfo);
-		packet_time = packet_output_absolute_time(context->active_packet);
 		// we want to wait for the right time to start playing the packet
 		if (packet_time > output_time) {
 			// not our time... wait
@@ -122,7 +123,8 @@ static inline void send_packet(audio_callback_context *context,
 
 	double resample_ratio = 1.0;
 
-	int64_t packet_offset = packet_output_offset_absolute_time(now, context->active_packet);
+	/* int64_t packet_offset = packet_output_offset_absolute_time(now, context->active_packet); */
+	int64_t packet_offset = packet_time - output_time;
 
 	// only used for debugging, not for adjusting the stream playback
 	double smoothed_timestamp_offset = stream_stats_update(context->timestamp_offset_stats, packet_offset);
