@@ -161,7 +161,7 @@ static inline void send_packet(audio_callback_context *context,
 
 	// debug at most every ~1s & only then once an individual packet's offset >
 	// this threshold.
-	const int64_t debug_threshold_us = 100; // µs
+	const int64_t debug_threshold_us = 50; // µs
 
 	if (context->frame_count > SAMPLE_RATE && llabs(packet_offset) > debug_threshold_us) {
 		context->frame_count = 0;
@@ -348,9 +348,9 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
 
-	pid_init(&context->pid, 8.0, 0.0, 0.001);
+	pid_init(&context->pid, 2.0, 1.0, 0.000);
 
-	stream_stats_init(context->timestamp_offset_stats, 0.0005);
+	stream_stats_init(context->timestamp_offset_stats, 0.0001);
 
 	context->active_packet->timestamp = 0;
 	context->active_packet->len       = 0;
