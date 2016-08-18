@@ -7,6 +7,12 @@
 static bool has_cpu_affinity = false;
 #endif // __APPLE__
 
+// configure these here because doing it in the header file breaks my make as I
+// don't have dependency checks.
+#define PID_P (2.0)
+#define PID_I (0)
+#define PID_D (0.05)
+
 void playback_stopped(audio_callback_context *context) {
 	printf("Playback stopped...\r\n");
 	context->playing     = false;
@@ -167,7 +173,7 @@ static inline void send_packet(audio_callback_context *context,
 	if (context->frame_count > SAMPLE_RATE && llabs(packet_offset) > debug_threshold_us) {
 		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
-		printf ("> % 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.2f, %.2f, %.2f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
+		printf ("> % 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.5f, %.5f, %.5f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
 	}
 
 }
@@ -349,7 +355,7 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	context->timestamp_offset_stats = driver_alloc(sizeof(stream_statistics_t));
 
-	pid_init(&context->pid, 2.0, 0.0, 0.001);
+	pid_init(&context->pid, PID_P, PID_I, PID_D);
 
 	stream_stats_init(context->timestamp_offset_stats, 0.0001);
 
