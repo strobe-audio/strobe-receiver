@@ -316,7 +316,7 @@ PaError initialize_audio_stream(audio_callback_context* context)
 	if (err != paNoError) { goto error; }
 
 	/* PaTime stream_time = Pa_GetStreamTime(stream); */
-  /*  */
+	/*  */
 	/* if (stream_time == 0) { goto error; } */
 
 	context->stream_start_time = monotonic_microseconds();
@@ -439,9 +439,9 @@ static void portaudio_drv_stop(ErlDrvData drv_data) {
 }
 
 static void encode_response(char *rbuf, int *index, long buffer_size) {
-  assert(rbuf && index);
+	assert(rbuf && index);
 	ei_encode_tuple_header(rbuf, index, 2);
-  ei_encode_atom(rbuf, index, "ok");
+	ei_encode_atom(rbuf, index, "ok");
 	ei_encode_long(rbuf, index, buffer_size);
 }
 
