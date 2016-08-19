@@ -24,7 +24,7 @@ double pid_control(
 	double error = setpoint - measured_value;
   double integral, derivative;
 
-  if (error > pid->di_cutoff) {
+  if (fabs(error) > pid->di_cutoff) {
     integral = 0.0;
     derivative = 0.0;
   } else {

@@ -1,4 +1,4 @@
-
+#include <math.h>
 
 typedef struct {
 	double kp, ki, kd;
