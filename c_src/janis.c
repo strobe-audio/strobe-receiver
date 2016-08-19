@@ -171,10 +171,23 @@ static inline void send_packet(audio_callback_context *context,
 	// this threshold.
 	const int64_t debug_threshold_us = 50; // µs
 
+	bool show_debug = false;
+	const char* ok  = "   ";
+	const char* bad = "!! ";
+	char* pre;
+
+	if (context->frame_count > (SAMPLE_RATE * 10)) {
+		show_debug = true;
+		pre = ok;
+	}
 	if (context->frame_count > SAMPLE_RATE && llabs(packet_offset) > debug_threshold_us) {
+		show_debug = true;
+		pre = bad;
+	}
+	if (show_debug) {
 		context->frame_count = 0;
 		double load = Pa_GetStreamCpuLoad(context->audio_stream) * 100;
-		printf ("> % 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.5f, %.5f, %.5f}\r\n", smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
+		printf ("%s % 9.2f,% 6"PRIi64",% 8.6f,% 7.2f%% - {%.5f, %.5f, %.5f}\r\n", pre, smoothed_timestamp_offset, packet_offset, resample_ratio, load, context->pid.kp, context->pid.ki, context->pid.kd);
 	}
 
 }
