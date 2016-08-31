@@ -12,6 +12,7 @@ defmodule Janis.Supervisor do
       worker(Janis.Audio, []),
       worker(Janis.DNSSD, []),
       worker(Janis.SSDP, []),
+      worker(Janis.Mdns, [], restart: :transient),
       worker(GenEvent, [[name: Janis.Broadcaster.Event]]),
       worker(Janis.Broadcaster.Event, [Janis.Broadcaster.Event])
     ]

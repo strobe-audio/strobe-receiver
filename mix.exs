@@ -21,8 +21,19 @@ defmodule Janis.Mixfile do
   #
   # Type `mix help compile.app` for more information
   def application do
-    [applications: [:logger, :monotonic, :uuid, :poison, :dnssd, :nerves_ssdp_client],
-     mod: {Janis, []}]
+    [ applications: [
+        :logger,
+        :monotonic,
+        :uuid,
+        :poison,
+        :dnssd,
+        :nerves_ssdp_client,
+      ],
+      included_applications: [
+        :mdns,
+      ],
+      mod: {Janis, []}
+    ]
   end
 
   # Dependencies can be Hex packages:
@@ -41,6 +52,7 @@ defmodule Janis.Mixfile do
       {:poison, "~> 1.5"},
       {:monotonic, git: "https://github.com/magnetised/monotonic.ex.git"},
       {:nerves_ssdp_client, "~> 0.1.3"},
+      {:mdns, github: "magnetised/mdns", branch: "master"},
     ]
   end
 end
