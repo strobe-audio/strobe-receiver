@@ -21,15 +21,19 @@ defmodule NervesJanis.Mixfile do
   #
   # Type `mix help compile.app` for more information.
   def application do
-    [mod: {NervesJanis, []},
-     applications: [
-       :logger,
-       :nerves,
-       :nerves_lib,
-       :"nerves_system_#{@target}",
-       :janis_init,
-       :janis,
-     ]]
+    [ mod: {NervesJanis, []},
+      applications: [
+        :logger,
+        :nerves,
+        :nerves_lib,
+        :"nerves_system_#{@target}",
+        :janis_init,
+        # :janis,
+      ],
+      included_applications: [
+        :janis
+      ],
+    ]
   end
 
   def deps do

@@ -18,6 +18,9 @@ config :nerves, :firmware,
   rootfs_additions: "config/rootfs"
   # fwup_conf: "config/fwup.conf"
 
+# Tell janis to use pure Elixir mDNS client
+config :janis, Janis.Mdns, true
+
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
