@@ -19,7 +19,6 @@ defmodule Janis.Player.Buffer do
       time_delta:      nil,
       last_emit_check: nil,
       interval_timer:  nil,
-      last_timestamp:  nil,
     ]
   end
 
@@ -67,7 +66,13 @@ defmodule Janis.Player.Buffer do
   end
 
   def handle_cast(:stop, state) do
-    Janis.Audio.stop
+    state = case state.interval_timer do
+      nil -> state
+      tref ->
+        {:ok, :cancel} = :timer.cancel(tref)
+        %S{ state | interval_timer: nil }
+    end
+    Janis.Audio.stop()
     Logger.info "Buffer stopped..."
     {:noreply, %S{state | status: :stopped, queue: :queue.new}}
   end
@@ -92,15 +97,6 @@ defmodule Janis.Player.Buffer do
     # first packet, we test for emission (?) when receiving the first packets
     put_packet!(packet, %S{state | status: :playing, interval_timer: tref}) |> maybe_emit_packets
   end
-
-  def put_packet(packet, %S{last_timestamp: nil} = state) do
-    put_packet!(packet, state)
-  end
-  def put_packet({timestamp, _data} = _packet, %S{last_timestamp: last_timestamp} = state)
-  when timestamp <= last_timestamp do
-    Logger.debug "Ignoring packet with timestamp in the past #{ timestamp } <= #{ last_timestamp }"
-    state
-  end
   def put_packet(packet, state) do
     put_packet!(packet, state)
   end
@@ -108,14 +104,13 @@ defmodule Janis.Player.Buffer do
   def put_packet!({broadcaster_timestamp, _} = packet, %S{status: :playing, queue: queue, count: count} = state) do
     {translated_packet, state} = translate_packet(packet, state)
     {timestamp, _} = translated_packet
-    case timestamp - monotonic_microseconds do
+    case timestamp - monotonic_microseconds() do
       x when x <= 0 ->
         Logger.warn "Late packet #{x} µs"
       _ -> nil
     end
     queue = cons(translated_packet, queue, count)
-    # The timestamp comparison guards are done before translation
-    %S{ state | queue: queue, count: count + 1, last_timestamp: broadcaster_timestamp }
+    %S{ state | queue: queue, count: count + 1 }
   end
 
   defp check_emit_interval(%S{broadcaster: broadcaster}) do
@@ -141,7 +136,7 @@ defmodule Janis.Player.Buffer do
     interval_ms = Janis.Broadcaster.stream_interval_ms(broadcaster)
 
     last_check = case last_check do
-      c when is_nil(c) -> monotonic_microseconds
+      nil -> monotonic_microseconds()
       c -> c
     end
 
@@ -151,17 +146,17 @@ defmodule Janis.Player.Buffer do
     { queue, packets } = peek_queue(queue, end_period, [])
 
     state = case length(packets) do
-      n when n > 0 ->
-        %S{ emit_packets(state, packets) | queue: queue, status: :playing }
-      _ -> state
+      0 -> state
+      n -> %S{ emit_packets(state, packets) | queue: queue, status: :playing }
     end
 
-    %S{ state | last_emit_check: monotonic_microseconds }
+    %S{ state | last_emit_check: monotonic_microseconds() }
   end
 
   def peek_queue(queue, end_period, packets_to_emit) do
     case :queue.peek(queue) do
-      :empty -> { queue, packets_to_emit }
+      :empty ->
+        { queue, packets_to_emit }
 
       {:value, {first_timestamp, _} = first_packet} ->
         case first_timestamp do

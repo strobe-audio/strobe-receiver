@@ -235,6 +235,7 @@ static int audio_callback(const void* _input,
 			printf("Popping %ld\n\r", (long)PaUtil_GetRingBufferReadAvailable(&context->audio_buffer));
 			PaUtil_ReadRingBuffer(&context->audio_buffer, &_packet, 1);
 		}
+		playback_stopped(context);
 		context->stopped = false;
 	} else {
 		if (CONTEXT_HAS_DATA(context)) {
