@@ -7,7 +7,6 @@ defmodule Janis.Network do
   """
   def lookup(hostname) do
     {:ok, ips, _} = gethostbyname(hostname)
-    best_ip(ips, local_interfaces)
     best_ip(ips, local_interfaces())
   end
 
