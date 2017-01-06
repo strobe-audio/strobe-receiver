@@ -36,7 +36,8 @@ defmodule Janis.Audio.PortAudio do
   @svol_command 5
 
   def handle_call(:time, _from, {port} = state) do
-    {:ok, c_time} = Port.control(port, @time_command, <<>>) |> decode_port_response
+    # {:ok, c_time} = Port.control(port, @time_command, <<>>) |> decode_port_response
+    {:ok, c_time} = :erlang.port_control(port, @time_command, <<>>) |> decode_port_response
     {:reply, {:ok, c_time, monotonic_microseconds}, state}
   end
 
@@ -50,18 +51,20 @@ defmodule Janis.Audio.PortAudio do
     {:noreply, state}
   end
 
-    :ok = Port.control(port, @svol_command, <<volume::size(32)-native-float>>) |> decode_port_response
   def handle_cast({:set_volume, linear_volume}, {port} = state) do
     # https://www.dr-lex.be/info-stuff/volumecontrols.html#table1
     volume = Janis.sanitize_volume(0.001 * :math.exp(linear_volume * 6.908))
     # volume = Janis.sanitize_volume(:math.pow(linear_volume,3))
     Logger.debug "Set volume #{linear_volume} -> #{ volume }"
+    # :ok = Port.control(port, @svol_command, <<volume::size(32)-native-float>>) |> decode_port_response
+    :ok = :erlang.port_control(port, @svol_command, <<volume::size(32)-native-float>>) |> decode_port_response
     {:noreply, state}
   end
 
   def handle_cast(:stop, {port} = state) do
     Logger.info "Stop"
-    :ok = Port.control(port, @stop_command, <<>>) |> decode_port_response
+    # :ok = Port.control(port, @stop_command, <<>>) |> decode_port_response
+    :ok = :erlang.port_control(port, @stop_command, <<>>) |> decode_port_response
     {:noreply, state}
   end
 
@@ -77,7 +80,9 @@ defmodule Janis.Audio.PortAudio do
   end
 
   defp play_packets([packet | packets], {port} = state) do
-    {:ok, _buffer_size} = Port.control(port, @play_command, audio_packet(packet)) |> decode_port_response
+    # {:ok, _buffer_size} = Port.control(port, @play_command, audio_packet(packet)) |> decode_port_response
+    {:ok, _buffer_size} = :erlang.port_control(port, @play_command, audio_packet(packet)) |> decode_port_response
+
     # TODO: decide if we're worried about the audio buffer here.
     # case buffer_size do
     #   1 -> Logger.warn "Audio driver has low buffer #{buffer_size}"
