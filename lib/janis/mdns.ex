@@ -38,7 +38,7 @@ defmodule Janis.Mdns do
   defmodule Handler do
     use GenEvent
 
-    def handle_event({:"_peep-broadcaster._tcp.local", device, 0}, broadcaster) when not is_nil(broadcaster) do
+    def handle_event({:"_peep-broadcaster._tcp.local", _device, 0}, broadcaster) when not is_nil(broadcaster) do
       IO.inspect :OFFLINE
       GenEvent.notify(Janis.Broadcaster.Event, {:offline, :mdns, broadcaster})
       {:ok, nil}
@@ -52,7 +52,7 @@ defmodule Janis.Mdns do
       {:ok, broadcaster}
     end
 
-    def handle_event(event, broadcaster) do
+    def handle_event(_event, broadcaster) do
       # IO.inspect {:event, event}
       # GenServer.cast(owner, event)
       {:ok, broadcaster}
