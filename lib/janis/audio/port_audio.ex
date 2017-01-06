@@ -50,11 +50,8 @@ defmodule Janis.Audio.PortAudio do
     {:noreply, state}
   end
 
-  def handle_cast({:set_volume, linear_volume}, {port} = state) do
-    # https://www.dr-lex.be/info-stuff/volumecontrols.html#table1
-    volume = Janis.sanitize_volume(0.001 * :math.exp(linear_volume * 6.908))
-    # volume = Janis.sanitize_volume(:math.pow(linear_volume,3))
-    Logger.debug "Set volume #{linear_volume} -> #{ volume }"
+  def handle_cast({:set_volume, volume}, {port} = state) do
+    Logger.info "Set volume #{volume}"
     # :ok = Port.control(port, @svol_command, <<volume::size(32)-native-float>>) |> decode_port_response
     :ok = :erlang.port_control(port, @svol_command, <<volume::size(32)-native-float>>) |> decode_port_response
     {:noreply, state}
