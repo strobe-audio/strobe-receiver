@@ -15,7 +15,7 @@ defmodule Janis.Player.Socket.Ctrl do
   end
 
   def handle_message(%{ "ping" => ping }, state) do
-    params = %{ id: id, pong: ping } |> Poison.encode!
+    params = %{ id: id(), pong: ping } |> Poison.encode!
     :gen_tcp.send(state.socket, params)
     state
   end

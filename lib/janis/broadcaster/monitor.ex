@@ -63,8 +63,8 @@ defmodule Janis.Broadcaster.Monitor do
       count == 0 -> { 100, 10, 0     }
       true       -> { 100, 1,  1_000 }
     end
-    :timer.send_after(delay, self, {:start_collection, interval, sample_size})
-    %S{ state | next_measurement_time: monotonic_milliseconds + delay + (sample_size * interval) }
+    :timer.send_after(delay, self(), {:start_collection, interval, sample_size})
+    %S{ state | next_measurement_time: monotonic_milliseconds() + delay + (sample_size * interval) }
   end
 
   ########################################################
@@ -75,7 +75,7 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   def handle_info({:start_collection, interval, sample_size}, %{sntp: sntp} = state) do
-    {:ok, pid} = Collector.start_collector(self, sntp, interval, sample_size)
+    {:ok, pid} = Collector.start_collector(self(), sntp, interval, sample_size)
     {:noreply, %S{ state | collector: pid}}
   end
 
@@ -119,7 +119,7 @@ defmodule Janis.Broadcaster.Monitor do
     notify_delta_change(delta, state)
     # This is a good time to clean up -- we've just emitted some packets
     # so we have > 20 ms before this has to happen again
-    :erlang.garbage_collect(self)
+    :erlang.garbage_collect(self())
     state
   end
 

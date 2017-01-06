@@ -114,7 +114,7 @@ defmodule Janis.Broadcaster.Monitor.Collector do
     end
 
     defp schedule(interval) do
-      Process.send_after(self, :measure, interval)
+      Process.send_after(self(), :measure, interval)
     end
 
     def terminate(:normal, _state) do

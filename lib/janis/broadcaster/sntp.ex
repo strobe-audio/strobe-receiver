@@ -54,7 +54,7 @@ defmodule Janis.Broadcaster.SNTP do
 
     packet = <<
       count::size(64)-little-unsigned-integer,
-      monotonic_microseconds::size(64)-little-signed-integer
+      monotonic_microseconds()::size(64)-little-signed-integer
     >>
 
     response = case :gen_udp.send(socket, broadcaster.ip, broadcaster.port, packet) do
@@ -81,7 +81,7 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   defp parse_response({_addr, _port, data}) do
-    now = monotonic_microseconds
+    now = monotonic_microseconds()
     << _count::size(64)-little-unsigned-integer,
        originate::size(64)-little-signed-integer,
        receipt::size(64)-little-signed-integer,

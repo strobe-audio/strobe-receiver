@@ -29,7 +29,7 @@ defmodule Janis.SSDP do
   end
 
   defp find_broadcaster(service) do
-    discover |> match |> monitor(service)
+    discover() |> match |> monitor(service)
   end
 
   # offline

@@ -19,8 +19,6 @@ defmodule Janis.Player do
     ]
   end
 
-  @name Janis.Player
-
   def start_link(broadcaster, latency) do
     GenServer.start_link(__MODULE__, {broadcaster, latency})
   end

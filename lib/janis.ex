@@ -34,12 +34,12 @@ defmodule Janis do
     end
   end
 
-  @required_if_flags Enum.into([:up, :running, :multicast], HashSet.new)
-  @invalid_if_flags  Enum.into([:pointtopoint], HashSet.new)
+  @required_if_flags Enum.into([:up, :running, :multicast], MapSet.new)
+  @invalid_if_flags  Enum.into([:pointtopoint], MapSet.new)
 
   def valid_if_flags?(opts) do
-    flags = Enum.into(opts[:flags], HashSet.new)
-    Set.subset?(@required_if_flags, flags) && Set.disjoint?(@invalid_if_flags, flags)
+    flags = Enum.into(opts[:flags], MapSet.new)
+    MapSet.subset?(@required_if_flags, flags) && MapSet.disjoint?(@invalid_if_flags, flags)
   end
 
   def valid_if_addrs?(opts) do

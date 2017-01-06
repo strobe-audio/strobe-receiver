@@ -24,7 +24,7 @@ defmodule Janis.Player.Socket.Data do
     Janis.Player.Buffer.put(state.buffer, packet)
     # This is a good time to clean up -- we've just received some packets
     # so we have > 20 ms before this has to happen again
-    :erlang.garbage_collect(self)
+    :erlang.garbage_collect(self())
     state
   end
 
@@ -33,6 +33,6 @@ defmodule Janis.Player.Socket.Data do
   end
 
   def registration_params(_broadcaster, latency) do
-    %{ id: id, latency: latency }
+    %{ id: id(), latency: latency }
   end
 end

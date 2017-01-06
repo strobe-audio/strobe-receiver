@@ -18,7 +18,7 @@ defmodule Janis.Player.Buffer.Delta do
   end
 
   def update(new_delta, next_measurement_time, %S{current: current, pending: pending} = _state) do
-    now = monotonic_milliseconds
+    now = monotonic_milliseconds()
     diff = new_delta - (current + pending)
     t = next_measurement_time - now
     d = (diff / t)
@@ -31,13 +31,13 @@ defmodule Janis.Player.Buffer.Delta do
 
   def current(%S{current: current, pending: pending} = state) when pending > 1000 do
     Logger.warn "Applying large time delta #{pending}"
-    now = monotonic_milliseconds
+    now = monotonic_milliseconds()
     current = current + pending
     {current, %S{state | current: current, pending: 0, time: now}}
   end
 
   def current(%S{current: current, pending: pending, d: d, time: t} = state) do
-    now = monotonic_milliseconds
+    now = monotonic_milliseconds()
     dt  = now - t
     c   = (d * dt) |> round |> min(pending)
     current = current + c

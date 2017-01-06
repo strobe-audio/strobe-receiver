@@ -14,7 +14,6 @@ defmodule Janis.Audio.PortAudio do
 
   @sample_bytes       div(@sample_bits, 8)
   @frame_bytes        (@sample_bytes * @sample_channels)
-  @frames_per_packet  div(@packet_size, @frame_bytes)
   @frame_duration_us  1_000_000 * (1.0 / @sample_freq)
 
 
@@ -38,7 +37,7 @@ defmodule Janis.Audio.PortAudio do
   def handle_call(:time, _from, {port} = state) do
     # {:ok, c_time} = Port.control(port, @time_command, <<>>) |> decode_port_response
     {:ok, c_time} = :erlang.port_control(port, @time_command, <<>>) |> decode_port_response
-    {:reply, {:ok, c_time, monotonic_microseconds}, state}
+    {:reply, {:ok, c_time, monotonic_microseconds()}, state}
   end
 
   def handle_call(:get_volume, _from, {port} = state) do
@@ -75,7 +74,7 @@ defmodule Janis.Audio.PortAudio do
   defp play_packets([], state) do
     # This is a good time to clean up -- we've just played some packets
     # so we have > 20 ms before this has to happen again
-    :erlang.garbage_collect(self)
+    :erlang.garbage_collect(self())
     state
   end
 

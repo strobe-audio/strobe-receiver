@@ -2,7 +2,6 @@ defmodule Janis.Broadcaster do
   use Supervisor
 
   @supervisor_name Janis.Broadcaster
-  @child_name Janis.Broadcaster
 
   defstruct [
     :host,

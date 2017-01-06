@@ -8,6 +8,7 @@ defmodule Janis.Network do
   def lookup(hostname) do
     {:ok, ips, _} = gethostbyname(hostname)
     best_ip(ips, local_interfaces)
+    best_ip(ips, local_interfaces())
   end
 
   @doc ~S"""
@@ -51,7 +52,7 @@ defmodule Janis.Network do
   end
 
   def bind_interface(ip) do
-    bind_interface(ip, local_interfaces)
+    bind_interface(ip, local_interfaces())
   end
 
   @doc ~S"""
@@ -225,11 +226,11 @@ defmodule Janis.Network do
       [{'lo0', []}, {'en1', []}]
 
   """
-  def local_interfaces(ifs \\ interfaces) do
+  def local_interfaces(ifs \\ interfaces()) do
     ifs |> Enum.filter(&local_interface?/1)
   end
 
-  def interfaces_with_ip(ifs \\ interfaces) do
+  def interfaces_with_ip(ifs \\ interfaces()) do
     ifs |> Enum.filter(fn({_name, attrs}) ->
       attrs |> Enum.any?(fn
         {:addr, _addr} -> true

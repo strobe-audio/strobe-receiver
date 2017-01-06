@@ -41,7 +41,7 @@ defmodule Janis.Player.Buffer do
     Logger.info "init #{ inspect broadcaster }"
     # TODO: receiver a monitor instance to avoid having to register the monitor
     # process.
-    Janis.Broadcaster.Monitor.add_time_delta_listener(self)
+    Janis.Broadcaster.Monitor.add_time_delta_listener(self())
     {:ok, %S{broadcaster: broadcaster}}
   end
 
@@ -101,7 +101,7 @@ defmodule Janis.Player.Buffer do
     put_packet!(packet, state)
   end
 
-  def put_packet!({broadcaster_timestamp, _} = packet, %S{status: :playing, queue: queue, count: count} = state) do
+  def put_packet!(packet, %S{status: :playing, queue: queue, count: count} = state) do
     {translated_packet, state} = translate_packet(packet, state)
     {timestamp, _} = translated_packet
     case timestamp - monotonic_microseconds() do
@@ -147,7 +147,7 @@ defmodule Janis.Player.Buffer do
 
     state = case length(packets) do
       0 -> state
-      n -> %S{ emit_packets(state, packets) | queue: queue, status: :playing }
+      _ -> %S{ emit_packets(state, packets) | queue: queue, status: :playing }
     end
 
     %S{ state | last_emit_check: monotonic_microseconds() }
@@ -172,7 +172,7 @@ defmodule Janis.Player.Buffer do
   def emit_packets(state, []) do
     # This is a good time to clean up -- we've just emitted some packets
     # so we have > 20 ms before this has to happen again
-    :erlang.garbage_collect(self)
+    :erlang.garbage_collect(self())
     state
   end
 

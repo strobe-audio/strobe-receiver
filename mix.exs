@@ -8,8 +8,8 @@ defmodule Janis.Mixfile do
      compilers: [:make, :elixir, :app],
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps,
-     aliases: aliases]
+     deps: deps(),
+     aliases: aliases()]
   end
 
   defp aliases do
@@ -59,7 +59,7 @@ end
 
 # mix compile.make
 defmodule Mix.Tasks.Compile.Make do
-  @shortdoc "Compiles c port driver"
+  @doc "Compiles c port driver"
 
   def run(_) do
     {result, _error_code} = System.cmd("make", [], stderr_to_stdout: true)
@@ -70,7 +70,7 @@ end
 
 # mix clean.make
 defmodule Mix.Tasks.Clean.Make do
-  @shortdoc "Cleans helper in c_src"
+  @doc "Cleans helper in c_src"
 
   def run(_) do
     {result, _error_code} = System.cmd("make", ['clean'], stderr_to_stdout: true)

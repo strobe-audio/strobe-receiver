@@ -71,7 +71,7 @@ defmodule Janis.Player.Socket do
       end
 
       def registration_params(broadcaster, latency) do
-        %{ id: id }
+        %{ id: id() }
       end
 
       def id, do: Janis.receiver_id
