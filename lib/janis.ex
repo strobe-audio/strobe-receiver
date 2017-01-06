@@ -67,4 +67,9 @@ defmodule Janis do
   def hwaddr({_name, opts}) do
     opts[:hwaddr]
   end
+
+  def sanitize_volume(volume) when is_integer(volume), do: sanitize_volume(volume + 0.0)
+  def sanitize_volume(volume) when volume > 1.0, do: 1.0
+  def sanitize_volume(volume) when volume < 0.0, do: 0.0
+  def sanitize_volume(volume), do: volume
 end
