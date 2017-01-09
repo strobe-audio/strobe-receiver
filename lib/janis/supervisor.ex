@@ -7,6 +7,7 @@ defmodule Janis.Supervisor do
 
   def init(:ok) do
     children = [
+      worker(Janis.Events, []),
       supervisor(Janis.Broadcaster, []),
       supervisor(Janis.Broadcaster.Monitor.Collector, []),
       worker(Janis.Audio, []),
