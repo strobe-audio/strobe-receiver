@@ -9,7 +9,10 @@ defmodule NervesJanis do
 
     # Define workers and child supervisors to be supervised
     children = [
+      worker(NervesJanis.Settings, []),
       supervisor(Janis.Supervisor, []),
+      worker(NervesJanis.ConfigurationEvents, []),
+      worker(NervesJanis.WLAN, []),
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

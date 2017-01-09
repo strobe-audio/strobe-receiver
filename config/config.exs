@@ -7,7 +7,7 @@ use Mix.Config
 
 
 config :logger, :console,
-  level: :info,
+  level: :debug,
   format: "$date $time $metadata [$level]$levelpad $message\n",
   sync_threshold: 1_000_000,
   metadata: [:module, :line],
@@ -20,6 +20,9 @@ config :nerves, :firmware,
 
 # Tell janis to use pure Elixir mDNS client
 config :janis, Janis.Mdns, true
+
+config :persistent_storage, NervesJanis.Settings,
+  path: "/root/_settings"
 
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

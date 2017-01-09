@@ -32,6 +32,10 @@ make linux-menuconfig
 ```
 
 Device drivers:
+  Network device support:
+    Wireless LAN:
+      <*> Broadcom 43xx wireless support (mac80211 stack)
+      [*] Broadcom 43xx SDIO device support
   I2C support  --->
     <*> I2C support
       I2C Hardware Bus support:
