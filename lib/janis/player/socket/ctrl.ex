@@ -27,6 +27,10 @@ defmodule Janis.Player.Socket.Ctrl do
     end)
     state
   end
+  def handle_message(msg, state) do
+    Logger.warn "Unhandled message #{inspect msg}"
+    state
+  end
 
   def configure(key, settings) do
     Janis.Events.notify({:configure, key, settings})
