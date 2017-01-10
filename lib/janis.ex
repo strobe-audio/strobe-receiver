@@ -20,30 +20,29 @@ defmodule Janis do
   end
 
   defp id_from_ifs({:ok, ifs}) do
-    List.first(valid_ifs(ifs)) |> id_from_if
+    ifs
+    |> valid_ifs
+    |> Enum.sort_by(fn({name, opts}) -> name end)
+    |> List.first
+    |> id_from_if
   end
 
   def valid_ifs do
-    {:ok, ifs} = :inet.getifaddrs
+    {:ok, ifs} = IO.inspect(:inet.getifaddrs)
     valid_ifs(ifs)
   end
 
   def valid_ifs(ifs) do
-    Enum.filter ifs, fn({_name, opts}) ->
-      valid_if_flags?(opts) && valid_if_addrs?(opts)
+    Enum.filter ifs, fn({name, opts}) ->
+      valid_if_name?(name) && valid_if_addrs?(opts)
     end
   end
 
-  @required_if_flags Enum.into([:up, :running, :multicast], MapSet.new)
-  @invalid_if_flags  Enum.into([:pointtopoint], MapSet.new)
-
-  def valid_if_flags?(opts) do
-    flags = Enum.into(opts[:flags], MapSet.new)
-    MapSet.subset?(@required_if_flags, flags) && MapSet.disjoint?(@invalid_if_flags, flags)
-  end
+  def valid_if_name?('lo'), do: false
+  def valid_if_name?(_name), do: true
 
   def valid_if_addrs?(opts) do
-    Enum.all? [:addr, :netmask, :hwaddr], fn(key) ->
+    Enum.all? [:hwaddr], fn(key) ->
       Keyword.has_key?(opts, key)
     end
   end
