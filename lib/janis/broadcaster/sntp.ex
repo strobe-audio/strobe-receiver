@@ -14,6 +14,7 @@ defmodule Janis.Broadcaster.SNTP do
   end
 
   def init(broadcaster) do
+    Janis.set_logger_metadata
     Logger.info "#{__MODULE__} initializing #{inspect broadcaster}"
     Process.flag(:trap_exit, true)
     {:ok, %{broadcaster: broadcaster, sync_count: 0}}

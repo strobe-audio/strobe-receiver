@@ -52,6 +52,7 @@ defmodule Janis.Broadcaster.Monitor do
   end
 
   def init(broadcaster) do
+    Janis.set_logger_metadata
     Logger.info "Starting Broadcaster.Monitor #{inspect broadcaster}"
     {:ok, sntp} = Janis.Broadcaster.SNTP.start_link(broadcaster)
     Process.flag(:trap_exit, true)

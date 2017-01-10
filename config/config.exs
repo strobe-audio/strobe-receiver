@@ -8,14 +8,19 @@ use Mix.Config
 # if you want to provide default values for your application for third-
 # party users, it should be done in your mix.exs file.
 
-# Sample configuration:
-#
+multicast_backend_config = [level: :debug, metadata: [:module, :line, :receiver_id], format: "$metadata [$level]$levelpad $message\n"]
+
+config :logger,
+  backends: [:console, {LoggerMulticastBackend, multicast_backend_config}],
+  level: :debug,
+  metadata: [:module, :line, :receiver_id]
+
 config :logger, :console,
   level: :debug,
-  format: "$date $time $metadata [$level]$levelpad $message\n",
   sync_threshold: 1_000_000,
-  metadata: [:module, :line],
-  colors: [info: :green]
+  metadata: [:module, :line, :receiver_id],
+  colors: [info: :green],
+  format: "$date $time $metadata [$level]$levelpad $message\n"
 
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment

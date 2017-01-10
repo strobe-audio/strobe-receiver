@@ -24,6 +24,7 @@ defmodule Janis.Player do
   end
 
   def init({broadcaster, latency}) do
+    Janis.set_logger_metadata
     Process.flag(:trap_exit, :true)
     {:ok, buffer} = Buffer.start_link(broadcaster)
     {:ok, data}   = start_connection(Data, broadcaster, latency, buffer)

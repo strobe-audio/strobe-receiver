@@ -10,6 +10,7 @@ defmodule Janis.Events do
 
 
   def start_link do
+    Janis.set_logger_metadata
     Logger.info "Starting #{ __MODULE__ }..."
     with {:ok, pid} <- GenEvent.start_link(name: @name),
     :ok <- add_handler(Janis.Events.Logger, :events), do: {:ok, pid}

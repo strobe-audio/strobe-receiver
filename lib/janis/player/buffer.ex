@@ -38,6 +38,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def init(broadcaster) do
+    Janis.set_logger_metadata
     Logger.info "init #{ inspect broadcaster }"
     # TODO: receiver a monitor instance to avoid having to register the monitor
     # process.

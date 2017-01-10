@@ -15,6 +15,7 @@ defmodule Janis.Mdns do
   end
 
   def init(:ok) do
+    Janis.set_logger_metadata
     case Application.get_env(:janis, __MODULE__) do
       true ->
         Logger.info "Starting mDNS Client..."

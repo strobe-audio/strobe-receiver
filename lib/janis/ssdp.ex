@@ -10,6 +10,7 @@ defmodule Janis.SSDP do
   end
 
   def init(_opts) do
+    Janis.set_logger_metadata
     poll(1)
     {:ok, nil}
   end

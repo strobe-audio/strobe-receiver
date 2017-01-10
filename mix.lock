@@ -1,6 +1,7 @@
 %{"c_monotonic_time": {:git, "https://github.com/magnetised/c_monotonic_time.git", "565adf0a3f0a820ab8a704b1e4a895a704cbccc4", []},
   "dns": {:hex, :dns, "0.0.4", "2e347a0a03e8345bc70c6d69ed08788103a3bec81b93e4636b1b432110835436", [:mix], [{:socket, "~> 0.3.5", [hex: :socket, optional: false]}]},
   "dnssd": {:git, "https://github.com/benoitc/dnssd_erlang.git", "9b2fdb7ff9618102d82f04e4c68ce191c9aa15ba", []},
+  "logger_multicast_backend": {:git, "https://github.com/magnetised/logger_multicast_backend.git", "829a94cafd81d13a70fcca7b8f0d8006a7996e8b", [branch: "master"]},
   "mdns": {:git, "https://github.com/magnetised/mdns.git", "9d3b4a51ca6f1942919a3b594fe36e2be9c8e08b", [branch: "master"]},
   "monotonic": {:git, "https://github.com/magnetised/monotonic.ex.git", "66121d98bea181a3f712a9a133d270a0f94d0ad1", []},
   "nerves_ssdp_client": {:hex, :nerves_ssdp_client, "0.1.3", "b09dc7433b2536399885a5f0fcd1fb58283115b075f9485f86fa713547d404dc", [:mix], []},

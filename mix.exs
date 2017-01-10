@@ -28,6 +28,7 @@ defmodule Janis.Mixfile do
         :poison,
         :dnssd,
         :nerves_ssdp_client,
+        :logger_multicast_backend,
       ],
       included_applications: [
         :mdns,
@@ -53,6 +54,7 @@ defmodule Janis.Mixfile do
       {:monotonic, git: "https://github.com/magnetised/monotonic.ex.git"},
       {:nerves_ssdp_client, "~> 0.1.3"},
       {:mdns, github: "magnetised/mdns", branch: "master"},
+      {:logger_multicast_backend, github: "magnetised/logger_multicast_backend", branch: "master"},
     ]
   end
 end

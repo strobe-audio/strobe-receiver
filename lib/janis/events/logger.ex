@@ -3,6 +3,7 @@ defmodule Janis.Events.Logger do
   require Logger
 
   def init(id) do
+    Janis.set_logger_metadata
     IO.inspect __MODULE__
     {:ok, %{id: id}}
   end

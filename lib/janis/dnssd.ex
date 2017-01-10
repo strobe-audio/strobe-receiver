@@ -16,6 +16,7 @@ defmodule Janis.DNSSD do
   end
 
   def init(:ok) do
+    Janis.set_logger_metadata
     Process.flag(:trap_exit, true)
     browser = case IO.inspect(:dnssd.browse(@service_name)) do
       {:ok, browser} ->

@@ -38,6 +38,7 @@ defmodule Janis.Broadcaster.Monitor.Collector do
     end
 
     def init([monitor, sntp, interval, count]) do
+      Janis.set_logger_metadata
       schedule(1)
       Process.monitor(monitor)
       {:ok, %S{monitor: monitor, sntp: sntp, interval: interval, count: count}}

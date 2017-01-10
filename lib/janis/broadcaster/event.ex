@@ -19,6 +19,7 @@ defmodule Janis.Broadcaster.Event do
   end
 
   def init(manager) do
+    Janis.set_logger_metadata
     GenEvent.add_mon_handler(manager, Handler, self())
     {:ok, %S{manager: manager}}
   end

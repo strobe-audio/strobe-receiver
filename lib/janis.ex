@@ -72,4 +72,8 @@ defmodule Janis do
   def sanitize_volume(volume) when volume > 1.0, do: 1.0
   def sanitize_volume(volume) when volume < 0.0, do: 0.0
   def sanitize_volume(volume), do: volume
+
+  def set_logger_metadata do
+    Logger.metadata(receiver_id: receiver_id())
+  end
 end

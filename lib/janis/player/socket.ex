@@ -18,6 +18,7 @@ defmodule Janis.Player.Socket do
       end
 
       def init([broadcaster, latency, buffer]) do
+        Janis.set_logger_metadata
         Logger.info "Init #{inspect broadcaster} latency: #{ latency }"
         Process.flag(:trap_exit, true)
         {:ok, socket} = connect(broadcaster, latency)

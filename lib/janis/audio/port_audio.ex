@@ -22,6 +22,7 @@ defmodule Janis.Audio.PortAudio do
   end
 
   def init(:ok) do
+    Janis.set_logger_metadata
     Logger.info "Starting portaudio driver..."
     :ok = load_driver()
     port = Port.open({:spawn_driver, @shared_lib}, [:stderr_to_stdout, :binary, :stream])
