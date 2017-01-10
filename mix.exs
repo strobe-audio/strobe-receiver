@@ -30,6 +30,7 @@ defmodule NervesJanis.Mixfile do
         :janis_init,
         :nerves_interim_wifi,
         :persistent_storage,
+        :logger_papertrail_backend,
         # :janis,
       ],
       included_applications: [
@@ -42,11 +43,12 @@ defmodule NervesJanis.Mixfile do
     [{:nerves, "~> 0.3.0"},
      {:nerves_lib, github: "nerves-project/nerves_lib"},
      {:nerves_networking, github: "nerves-project/nerves_networking"},
-     {:janis, git: "git@gitlab.com:magnetised/janis.git", branch: "wifi"},
+     {:janis, git: "git@gitlab.com:magnetised/janis.git", branch: "master"},
      # {:janis_init, git: "git@gitlab.com:magnetised/janis_init.git"},
      {:janis_init, path: "/home/garry/janis_init"},
      {:nerves_interim_wifi, "~> 0.1.0"},
      {:persistent_storage, github: "cellulose/persistent_storage"},
+     {:logger_papertrail_backend, "~> 0.1.0"},
     ]
   end
 

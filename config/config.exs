@@ -6,12 +6,31 @@
 use Mix.Config
 
 
+multicast_backend_config = [level: :debug, metadata: [:module, :line, :receiver_id], format: "$metadata [$level]$levelpad $message\n"]
+
+config :logger,
+  backends: [:console, {LoggerMulticastBackend, multicast_backend_config}],
+  level: :debug,
+  metadata: [:module, :line]
+
 config :logger, :console,
   level: :debug,
-  format: "$date $time $metadata [$level]$levelpad $message\n",
   sync_threshold: 1_000_000,
   metadata: [:module, :line],
-  colors: [info: :green]
+  colors: [info: :green],
+  format: "$date $time $metadata [$level]$levelpad $message\n"
+
+
+# config :logger, :logger_papertrail_backend,
+#   host: "logs5.papertrailapp.com:21266",
+#   level: :debug,
+#   system_name: System.get_env |> Map.get("PAPERTRAIL_SYSTEM_NAME", "kirkliston"),
+#   format: "$date $time $metadata [$level]$levelpad $message\n",
+#   metadata: [:module, :line]
+
+# config :logger,
+#   backends: [:console, LoggerPapertrailBackend.Logger],
+#   level: :debug
 
 # TODO: make the additions configurable per DAC
 config :nerves, :firmware,
