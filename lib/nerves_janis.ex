@@ -12,7 +12,8 @@ defmodule NervesJanis do
       worker(NervesJanis.Settings, []),
       supervisor(Janis.Supervisor, []),
       worker(NervesJanis.ConfigurationEvents, []),
-      worker(NervesJanis.WLAN, []),
+      worker(NervesJanis.Network.Wlan, ["wlan0"]),
+      worker(NervesJanis.Network.Eth, ["eth0"]),
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

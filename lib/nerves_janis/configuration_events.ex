@@ -4,11 +4,6 @@ defmodule NervesJanis.ConfigurationEvents do
   defmodule Handler do
     use GenEvent
 
-    def init(_opts) do
-      IO.inspect __MODULE__
-      {:ok, %{}}
-    end
-
     def handle_event({:configure, :wifi, config}, state) do
       :ok = NervesJanis.Settings.put_wifi_config(config)
       {:ok, state}

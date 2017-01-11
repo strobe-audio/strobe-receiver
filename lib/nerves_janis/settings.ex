@@ -36,10 +36,11 @@ defmodule NervesJanis.Settings do
   end
 
   def handle_call({:put, values}, _from, state) do
+    Logger.info "Putting config #{inspect values}"
     {:reply, PersistentStorage.put(values), state}
   end
   def handle_call({:put, key, value}, _from, state) do
-    IO.inspect [:put, key, value]
+    Logger.info "Putting config #{key} => #{inspect value}"
     {:reply, PersistentStorage.put(key, value), state}
   end
   def handle_call({:get, key, default}, _from, state) do
