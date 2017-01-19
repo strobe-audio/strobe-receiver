@@ -172,17 +172,15 @@ static inline void send_packet(audio_callback_context *context,
 	const int64_t debug_threshold_us = 50; // µs
 
 	bool show_debug = false;
-	const char* ok  = "   ";
-	const char* bad = "!! ";
 	char* pre;
 
 	if (context->frame_count > (SAMPLE_RATE * 10)) {
 		show_debug = true;
-		pre = ok;
+		pre = "   ";
 	}
 	if (context->frame_count > SAMPLE_RATE && llabs(packet_offset) > debug_threshold_us) {
 		show_debug = true;
-		pre = bad;
+		pre = "!! ";
 	}
 	if (show_debug) {
 		context->frame_count = 0;
