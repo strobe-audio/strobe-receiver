@@ -20,7 +20,7 @@ defmodule Janis.Player do
   end
 
   def start_link(broadcaster, latency) do
-    GenServer.start_link(__MODULE__, {broadcaster, latency})
+    GenServer.start_link(__MODULE__, {broadcaster, latency}, name: __MODULE__)
   end
 
   def init({broadcaster, latency}) do
@@ -42,6 +42,11 @@ defmodule Janis.Player do
     Logger.warn "Ctrl connection closed, re-connecting..."
     {:ok, data} = start_connection(Ctrl, state.broadcaster, state.latency, state.buffer)
     {:noreply, %S{state | data: data}}
+  end
+
+  def handle_info(msg, state) do
+    Logger.warn "#{__MODULE__} handle_info/2 unhandled message #{ inspect msg }"
+    {:noreply, state}
   end
 
   defp start_connection(module, broadcaster, latency, buffer) do

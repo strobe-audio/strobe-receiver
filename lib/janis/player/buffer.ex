@@ -52,7 +52,7 @@ defmodule Janis.Player.Buffer do
   end
 
   def handle_cast({:init_time_delta, delta}, state) do
-    Logger.debug "Init time delta, #{delta}"
+    Logger.info "Init time delta, #{delta}"
     {:noreply, %S{ state | time_delta: Delta.new(delta) }}
   end
 

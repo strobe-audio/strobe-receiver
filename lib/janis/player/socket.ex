@@ -26,7 +26,7 @@ defmodule Janis.Player.Socket do
       end
 
       def handle_info(event, state) do
-        Logger.debug "#{ __MODULE__} unhandled event #{ inspect event }"
+        Logger.warn "#{__MODULE__} unhandled event #{ inspect event }"
         {:noreply, state}
       end
 
@@ -36,7 +36,7 @@ defmodule Janis.Player.Socket do
       end
 
       def handle_message(message, state) do
-        Logger.debug "#{ __MODULE__} unhandled message #{ inspect message }"
+        Logger.warn "#{ __MODULE__} unhandled message #{ inspect message }"
         state
       end
 

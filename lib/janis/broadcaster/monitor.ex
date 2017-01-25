@@ -19,6 +19,7 @@ defmodule Janis.Broadcaster.Monitor do
   defmodule S do
     defstruct [
       broadcaster: nil,
+      player: nil,
       sntp: nil,
       delta: nil,
       latency: 0,
@@ -99,12 +100,12 @@ defmodule Janis.Broadcaster.Monitor do
     {:stop, :normal, state}
   end
 
-  def handle_cast({:append_measurement, measurement}, %S{measurement_count: 0} = state) do
+  def handle_cast({:append_measurement, measurement}, %S{player: nil} = state) do
     # First measurement! Join receiver channel!
     %S{latency: latency, broadcaster: broadcaster} = state = append_measurement(measurement, state)
     Logger.info "Joining broadcaster ... #{inspect broadcaster} latency: #{ latency }"
-    Janis.Player.start_link(broadcaster, latency)
-    {:noreply, state}
+    {:ok, player} = Janis.Player.start_link(broadcaster, latency)
+    {:noreply, %S{state | player: player}}
   end
 
   def handle_cast({:append_measurement, measurement}, state) do
