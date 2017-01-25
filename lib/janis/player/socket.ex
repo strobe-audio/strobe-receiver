@@ -10,7 +10,7 @@ defmodule Janis.Player.Socket do
 
       defmodule S do
         @moduledoc false
-        defstruct [:broadcaster, :buffer, :socket]
+        defstruct [:broadcaster, :buffer, :socket, :timeout]
       end
 
       def start_link(broadcaster, latency, buffer) do
@@ -25,6 +25,10 @@ defmodule Janis.Player.Socket do
         {:ok, %S{broadcaster: broadcaster, buffer: buffer, socket: socket}}
       end
 
+      def handle_info(:timeout, state) do
+        Logger.warn "#{__MODULE__} connection timed out"
+        {:stop, :tcp_closed, cancel_timeout(state)}
+      end
       def handle_info(event, state) do
         Logger.warn "#{__MODULE__} unhandled event #{ inspect event }"
         {:noreply, state}
@@ -78,6 +82,20 @@ defmodule Janis.Player.Socket do
       def id, do: Janis.receiver_id
 
       defoverridable [ handle_info: 2, registration_params: 2, handle_message: 2 ]
+      defp reset_timeout(state) do
+        state |> cancel_timeout |> start_timeout
+      end
+      defp start_timeout(state) do
+        tref = Process.send_after(self(), :timeout, 5_000)
+        %S{ state | timeout: tref }
+      end
+
+      defp cancel_timeout(%S{timeout: nil} = state), do: state
+      defp cancel_timeout(%S{timeout: tref} = state) do
+        Process.cancel_timer(tref)
+        %S{ state | timeout: nil }
+      end
+
     end
   end
 end
