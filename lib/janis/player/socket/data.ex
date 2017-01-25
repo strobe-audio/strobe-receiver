@@ -2,14 +2,24 @@ defmodule Janis.Player.Socket.Data do
   use Janis.Player.Socket
 
   @stop_command << "STOP" >>
+  @ping_command << "PING" >>
+
+  def handle_data(state, @ping_command) do
+    state |> reset_timeout
+  end
 
   def handle_data(state, @stop_command) do
     Janis.Player.Buffer.stop(state.buffer)
-    state
+    state |> reset_timeout
   end
 
   def handle_data(state, <<_c::size(64), timestamp::size(64)-little-signed-integer, audio::binary >>) do
-    put(state, {timestamp, audio})
+    state |> reset_timeout |> put({timestamp, audio})
+  end
+
+  def handle_data(state, data) do
+    Logger.warn "#{__MODULE__} Invalid data packet #{inspect data}"
+    state |> reset_timeout
   end
 
   defp put(state, packet) do
