@@ -33,7 +33,7 @@ defmodule NervesJanis.Mixfile do
         :nerves_interim_wifi,
         :persistent_storage,
         :logger_papertrail_backend,
-        # :janis,
+        :nerves_firmware_http,
       ],
       included_applications: [
         :janis
@@ -52,6 +52,7 @@ defmodule NervesJanis.Mixfile do
      {:nerves_interim_wifi, "~> 0.1.0"},
      {:persistent_storage, github: "cellulose/persistent_storage"},
      {:logger_papertrail_backend, "~> 0.1.0"},
+     {:nerves_firmware_http, github: "magnetised/nerves_firmware_http"}
     ]
   end
 
@@ -64,4 +65,7 @@ defmodule NervesJanis.Mixfile do
      "deps.loadpaths":  ["deps.loadpaths", "nerves.loadpaths"]]
   end
 
+  def target do
+    @target
+  end
 end

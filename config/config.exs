@@ -43,6 +43,11 @@ config :janis, Janis.Mdns, true
 config :persistent_storage, NervesJanis.Settings,
   path: "/root/_settings"
 
+
+config :nerves_firmware_http,
+  version: System.get_env("JANIS_FIRMWARE_VERSION") || "unknown",
+  system: NervesJanis.Mixfile.target
+
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
