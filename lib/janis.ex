@@ -22,7 +22,7 @@ defmodule Janis do
   defp id_from_ifs({:ok, ifs}) do
     ifs
     |> valid_ifs
-    |> Enum.sort_by(fn({name, opts}) -> name end)
+    |> Enum.sort_by(fn({name, _opts}) -> name end)
     |> List.first
     |> id_from_if
   end
