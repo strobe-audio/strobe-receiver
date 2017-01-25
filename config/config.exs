@@ -48,6 +48,11 @@ config :nerves_firmware_http,
   version: System.get_env("JANIS_FIRMWARE_VERSION") || "unknown",
   system: NervesJanis.Mixfile.target
 
+config :ex_aws,
+  access_key_id: [{:system, "AWS_ACCESS_KEY_ID"}, :instance_role],
+  secret_access_key: [{:system, "AWS_SECRET_ACCESS_KEY"}, :instance_role],
+  region: "eu-west-1"
+
 # Import target specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # Uncomment to use target specific configurations
