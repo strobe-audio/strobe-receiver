@@ -7,7 +7,7 @@
   "erlware_commons": {:hex, :erlware_commons, "0.21.0", "a04433071ad7d112edefc75ac77719dd3e6753e697ac09428fc83d7564b80b15", [:rebar3], [{:cf, "0.2.1", [hex: :cf, optional: false]}]},
   "exrm": {:hex, :exrm, "1.0.8", "5aa8990cdfe300282828b02cefdc339e235f7916388ce99f9a1f926a9271a45d", [:mix], [{:relx, "~> 3.5", [hex: :relx, optional: false]}]},
   "getopt": {:hex, :getopt, "0.8.2", "b17556db683000ba50370b16c0619df1337e7af7ecbf7d64fbf8d1d6bce3109b", [:rebar], []},
-  "janis": {:git, "git@gitlab.com:magnetised/janis.git", "eb84cb44129d44eb7b2a80ece517e6cd51841957", [branch: "master"]},
+  "janis": {:git, "git@gitlab.com:magnetised/janis.git", "81c195e25179b4f17075b9e00d2af7f6644aca52", [branch: "master"]},
   "janis_init": {:git, "git@gitlab.com:magnetised/janis_init.git", "0196b761d9081cacc2e1e65be4dfa4faae59d6f0", []},
   "logger_multicast_backend": {:git, "https://github.com/magnetised/logger_multicast_backend.git", "829a94cafd81d13a70fcca7b8f0d8006a7996e8b", [branch: "master"]},
   "logger_papertrail_backend": {:hex, :logger_papertrail_backend, "0.1.1", "d5e8a56037dff43126db32b72c23087207b06dc6cfab50d4f476d5ec3536ab5d", [:mix], []},
