@@ -32,7 +32,7 @@ defmodule Janis.Broadcaster.Event do
     {:noreply, state}
   end
   def handle_cast({:offline, _source, broadcaster}, %S{broadcaster: broadcaster} = state) do
-    # Stop broadcaster instance
+    :ok = Janis.Broadcaster.stop_broadcaster(broadcaster)
     {:noreply, %S{state | broadcaster: nil}}
   end
   def handle_cast({:offline, _source, _broadcaster}, state) do
