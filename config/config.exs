@@ -10,11 +10,11 @@ multicast_backend_config = [level: :debug, metadata: [:module, :line, :receiver_
 
 config :logger,
   backends: [:console, {LoggerMulticastBackend, multicast_backend_config}],
-  level: :debug,
+  level: :info,
   metadata: [:module, :line]
 
 config :logger, :console,
-  level: :debug,
+  level: :info,
   sync_threshold: 1_000_000,
   metadata: [:module, :line],
   colors: [info: :green],
