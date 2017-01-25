@@ -2,12 +2,8 @@ defmodule Janis.Player.Socket.Ctrl do
   use     Janis.Player.Socket
   require Logger
 
-  def handle_info({:tcp, _socket, data}, state) do
-    state = data |> Poison.decode! |> handle_message(state)
-    {:noreply, state}
-  end
-  def handle_info({:tcp_closed, _socket}, state) do
-    {:stop, :tcp_closed, state}
+  def handle_data(state, data) do
+    data |> Poison.decode! |> handle_message(state) |> reset_timeout
   end
 
   def handle_message(%{ "volume" => volume }, state) do
@@ -16,8 +12,8 @@ defmodule Janis.Player.Socket.Ctrl do
   end
 
   def handle_message(%{ "ping" => ping }, state) do
-    params = %{ id: id(), pong: ping } |> Poison.encode!
-    :gen_tcp.send(state.socket, params)
+    response = %{ id: id(), pong: ping } |> Poison.encode!
+    :gen_tcp.send(state.socket, response)
     state
   end
 

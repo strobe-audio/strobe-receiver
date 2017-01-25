@@ -25,6 +25,16 @@ defmodule Janis.Player.Socket do
         {:ok, %S{broadcaster: broadcaster, buffer: buffer, socket: socket}}
       end
 
+      def handle_info({:tcp, _socket, data}, state) do
+        state = state |> handle_data(data)
+        {:noreply, state}
+      end
+      def handle_info({:tcp_closed, _socket}, state) do
+        {:stop, :tcp_closed, state}
+      end
+      def handle_info({:tcp_error, _socket, reason}, state) do
+        {:stop, reason, state}
+      end
       def handle_info(:timeout, state) do
         Logger.warn "#{__MODULE__} connection timed out"
         {:stop, :tcp_closed, cancel_timeout(state)}
@@ -41,6 +51,11 @@ defmodule Janis.Player.Socket do
 
       def handle_message(message, state) do
         Logger.warn "#{ __MODULE__} unhandled message #{ inspect message }"
+        state
+      end
+
+      def handle_data(state, data) do
+        Logger.warn "#{__MODULE__} unhandled data #{ inspect data }"
         state
       end
 
@@ -81,7 +96,6 @@ defmodule Janis.Player.Socket do
 
       def id, do: Janis.receiver_id
 
-      defoverridable [ handle_info: 2, registration_params: 2, handle_message: 2 ]
       defp reset_timeout(state) do
         state |> cancel_timeout |> start_timeout
       end
@@ -96,6 +110,7 @@ defmodule Janis.Player.Socket do
         %S{ state | timeout: nil }
       end
 
+      defoverridable [ handle_info: 2, registration_params: 2, handle_message: 2, handle_data: 2 ]
     end
   end
 end
