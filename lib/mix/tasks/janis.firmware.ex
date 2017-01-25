@@ -1,8 +1,6 @@
 defmodule Mix.Tasks.Janis.Firmware do
   use Mix.Task
 
-  alias ExAws.S3
-
   @shortdoc "Builds firmware with a set version"
 
   def run(_args) do
