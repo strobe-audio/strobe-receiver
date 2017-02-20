@@ -1,0 +1,19 @@
++K true
+-smp auto
++scl false
++spp true
++swt low
++sbwt long
+
+# exclude core 0 from schedulers (to assign it to audio thread)
+# now done using kernel args in cmdline.txt
+# +sct L0-3c0-3
+
+# bind with no spread
++sbt ns
+
+-noshell
+## Start the Elixir shell
+-user Elixir.IEx.CLI
+-extra --no-halt
+
