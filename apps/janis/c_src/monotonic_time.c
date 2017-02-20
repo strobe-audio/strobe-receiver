@@ -7,7 +7,7 @@
 
 
 // http://web.archive.org/web/20100501115556/http://le-depotoir.googlecode.com/svn/trunk/misc/clock_gettime_stub.c
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(__MAC_10_12)
 /*
  * Copyright (c), MM Weiss
  * All rights reserved.
@@ -82,12 +82,14 @@
 #include <unistd.h>
 #include <sched.h>
 
+
 typedef enum {
 	CLOCK_REALTIME,
 	CLOCK_MONOTONIC,
 	CLOCK_PROCESS_CPUTIME_ID,
 	CLOCK_THREAD_CPUTIME_ID
 } clockid_t;
+
 
 static mach_timebase_info_data_t __clock_gettime_inf;
 
