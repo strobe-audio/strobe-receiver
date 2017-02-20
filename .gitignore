@@ -2,7 +2,7 @@
 /deps
 erl_crash.dump
 *.ez
-c_src/*.o
+*.o
 priv_dir
 priv
 tags
