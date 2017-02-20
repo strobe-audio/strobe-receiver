@@ -96,12 +96,12 @@ static inline uint64_t packet_output_absolute_time(timestamped_packet *packet) {
 // returns +ve if the packet is ahead of where it's supposed to be i.e. the audio is playing too fast
 //           0 if the packet is playing exactly at the right time
 // and     -ve if the packet is behind where it's supposed to be i.e. the audio is playing too slowly
-static inline int64_t packet_output_offset_absolute_time(
-		uint64_t current_time,
-		timestamped_packet *packet
-		) {
-	return (int64_t)(packet_output_absolute_time(packet) - current_time);
-}
+//static inline int64_t packet_output_offset_absolute_time(
+//		uint64_t current_time,
+//		timestamped_packet *packet
+//		) {
+//	return (int64_t)(packet_output_absolute_time(packet) - current_time);
+//}
 
 
 static inline void send_packet(audio_callback_context *context,
