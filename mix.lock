@@ -1,0 +1,2 @@
+%{"nerves_networking": {:git, "https://github.com/nerves-project/nerves_networking.git", "dfe06c57ae10212f9a44e25cdf575ed8e862d86c", []},
+  "porcelain": {:hex, :porcelain, "2.0.1", "9c3db2b47d8cf6879c0d9ac79db8657333974a88faff09e856569e00c1b5e119", [:mix], []}}
