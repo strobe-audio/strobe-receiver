@@ -6,9 +6,9 @@ defmodule JanisInit.LED do
   end
 
   def init(_args) do
-    # mmc0, cpu0-3, none
-    write!("/sys/class/leds/led0/trigger", "cpu0")
-    # write!("/sys/class/leds/led0/brightness", "1")
+    # mmc0, cpu0-3, none, gpio
+    # write!("/sys/class/leds/led0/trigger", "gpio")
+    write!("/sys/class/leds/led0/brightness", "0")
     # write!("/sys/class/leds/led1/brightness", "0")
 
     {:ok, []}
