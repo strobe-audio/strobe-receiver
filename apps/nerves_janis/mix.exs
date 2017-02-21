@@ -39,10 +39,10 @@ defmodule NervesJanis.Mixfile do
       ],
       included_applications: [
         :janis,
-        :ex_aws,
-        :poison,
-        :hackney,
-        :sweet_xml,
+        # :ex_aws,
+        # :poison,
+        # :hackney,
+        # :sweet_xml,
       ],
     ]
   end
@@ -58,10 +58,10 @@ defmodule NervesJanis.Mixfile do
      {:persistent_storage, github: "cellulose/persistent_storage", tag: "v0.9.0"},
      {:logger_papertrail_backend, "~> 0.1.0"},
      {:nerves_firmware_http, github: "magnetised/nerves_firmware_http"},
-     {:ex_aws, "~> 1.0"},
-     {:poison, "~> 1.5"},
-     {:hackney, "~> 1.6"},
-     {:sweet_xml, "~> 0.6"},
+     # {:ex_aws, "~> 1.0"},
+     # {:poison, "~> 1.5"},
+     # {:hackney, "~> 1.6"},
+     # {:sweet_xml, "~> 0.6"},
     ]
   end
 
