@@ -5,7 +5,7 @@ defmodule NervesJanis.Mixfile do
 
   def project do
     [app: :nerves_janis,
-     version: "0.0.1",
+     version: "0.1.0",
      target: @target,
      config_path: "config/config.exs",
      deps_path: "../../deps/#{@target}",
