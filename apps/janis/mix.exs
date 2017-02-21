@@ -8,7 +8,6 @@ defmodule Janis.Mixfile do
      config_path: "../../config/config.exs",
      deps_path: "../../deps",
      lockfile: "../../mix.lock",
-     elixir: "~> 1.2",
      compilers: [:make, :elixir, :app],
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
