@@ -25,6 +25,16 @@ your chosen DAC(s) to an amplifier & speakers.
 
 [Strobe Hub]: https://github.com/strobe-audio/strobe-hub
 
+## Burning the firmware
+
+Download the image file [latest release][] that matches your hardware then
+follow the [instructions for writing to an SD card][] on the Raspberry Pi site.
+
+Pop your new SD card into the RPi and you're good to go.
+
+[latest release]: https://github.com/strobe-audio/strobe-receiver/releases
+[instructions for writing to an SD card]: https://www.raspberrypi.org/documentation/installation/installing-images/
+
 ## Running locally
 
 It's possible to run the receiver locally if you'd like to play music through
