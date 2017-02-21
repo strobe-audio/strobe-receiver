@@ -7,13 +7,15 @@ defmodule NervesJanis.Mixfile do
     [app: :nerves_janis,
      version: "0.0.1",
      target: @target,
-     archives: [nerves_bootstrap: "~> 0.1.4"],
-     deps_path: "deps/#{@target}",
-     build_path: "_build/#{@target}",
+     config_path: "config/config.exs",
+     deps_path: "../../deps/#{@target}",
+     build_path: "../../_build/#{@target}",
+     lockfile: "../../mix.lock",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     aliases: aliases,
-     deps: deps ++ system(@target)
+     archives: archives(),
+     aliases: aliases(),
+     deps: deps() ++ system(@target)
    ]
   end
 
@@ -50,9 +52,11 @@ defmodule NervesJanis.Mixfile do
      {:nerves_lib, github: "nerves-project/nerves_lib"},
      {:nerves_networking, github: "nerves-project/nerves_networking"},
      {:nerves_network_interface, "~> 0.3.2"},
-     {:janis, git: "git@gitlab.com:magnetised/janis.git", branch: "master"},
+     # {:janis, git: "git@gitlab.com:magnetised/janis.git", branch: "master"},
+     {:janis, in_umbrella: true},
      # {:janis_init, git: "git@gitlab.com:magnetised/janis_init.git"},
-     {:janis_init, path: "/home/garry/janis_init"},
+     # {:janis_init, path: "/home/garry/janis_init"},
+     {:janis_init, in_umbrella: true},
      {:nerves_interim_wifi, "~> 0.1.0"},
      {:persistent_storage, github: "cellulose/persistent_storage"},
      {:logger_papertrail_backend, "~> 0.1.0"},
@@ -71,6 +75,10 @@ defmodule NervesJanis.Mixfile do
   def aliases do
     ["deps.precompile": ["nerves.precompile", "deps.precompile"],
      "deps.loadpaths":  ["deps.loadpaths", "nerves.loadpaths"]]
+  end
+
+  def archives do
+     [nerves_bootstrap: "~> 0.1.4"]
   end
 
   def target do

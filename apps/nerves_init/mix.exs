@@ -4,10 +4,15 @@ defmodule JanisInit.Mixfile do
   def project do
     [app: :janis_init,
      version: "0.1.0",
-     elixir: "~> 1.3",
+     build_path: "../../_build",
+     config_path: "../../config/config.exs",
+     deps_path: "../../deps",
+     lockfile: "../../mix.lock",
+     elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps()]
+     deps: deps(),
+   ]
   end
 
   # Configuration for the OTP application
