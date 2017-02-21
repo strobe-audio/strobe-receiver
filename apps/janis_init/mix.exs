@@ -18,7 +18,7 @@ defmodule JanisInit.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :nerves_networking, :porcelain],
+    [applications: [:logger, :nerves_networking],
      mod: {JanisInit, []}]
   end
 
@@ -33,7 +33,6 @@ defmodule JanisInit.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [{:nerves_networking, github: "nerves-project/nerves_networking"},
-     {:porcelain, "~> 2.0.1"},
     ]
   end
 end
