@@ -11,7 +11,7 @@ defmodule JanisInit do
       worker(JanisInit.Cpu, [], restart: :transient),
       worker(JanisInit.Eth, [], restart: :transient),
       worker(JanisInit.Alsa, []),
-      worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
+      # worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
       # worker(JanisInit.Dbus, []),
       # worker(JanisInit.Avahi, []),
       # worker(JanisInit.Chrt, [], restart: :transient),
