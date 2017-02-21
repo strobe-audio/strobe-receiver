@@ -9,6 +9,7 @@ defmodule JanisInit do
 
     children = [
       worker(JanisInit.Cpu, [], restart: :transient),
+      worker(JanisInit.LED, [], restart: :transient),
       worker(JanisInit.Eth, [], restart: :transient),
       worker(JanisInit.Alsa, []),
       # worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
