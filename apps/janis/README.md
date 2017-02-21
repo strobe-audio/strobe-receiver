@@ -1,13 +1,7 @@
 Janis
 =====
 
-```elixir
-
-{:ok, song} = File.read "/Users/garry/Seafile/Peep/audio/song.raw"
-
-Janis.Player.play song
-
-```
+Janis is the voice of [Strobe Audio](http://strobe.audio)
 
 TODO
 ----
@@ -38,7 +32,7 @@ Dependencies
 
      brew install libsamplerate
 
-Running
+Old notes
 ------
 
 ### Install
