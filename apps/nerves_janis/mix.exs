@@ -58,7 +58,7 @@ defmodule NervesJanis.Mixfile do
      # {:janis_init, path: "/home/garry/janis_init"},
      {:janis_init, in_umbrella: true},
      {:nerves_interim_wifi, "~> 0.1.0"},
-     {:persistent_storage, github: "cellulose/persistent_storage"},
+     {:persistent_storage, github: "cellulose/persistent_storage", tag: "v0.9.0"},
      {:logger_papertrail_backend, "~> 0.1.0"},
      {:nerves_firmware_http, github: "magnetised/nerves_firmware_http"},
      {:ex_aws, "~> 1.0"},
