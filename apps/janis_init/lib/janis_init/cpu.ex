@@ -1,4 +1,4 @@
-defmodule JanisInit.Cpu do
+defmodule JanisInit.CPU do
   require Logger
 
   def start_link() do
@@ -6,10 +6,9 @@ defmodule JanisInit.Cpu do
   end
 
   def init(_args) do
-
     governors
     |> Enum.zip(~w(powersave powersave powersave performance))
-    |> Enum.each(fn({cpu, setting}) -> JanisInit.Cpu.write!(cpu, setting) end)
+    |> Enum.each(fn({cpu, setting}) -> write!(cpu, setting) end)
 
     write!("/proc/sys/vm/swappiness", "0")
     write!("/proc/sys/kernel/sched_min_granularity_ns", "750000")

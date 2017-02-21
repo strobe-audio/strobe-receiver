@@ -1,4 +1,4 @@
-defmodule JanisInit.Eth do
+defmodule JanisInit.ETH do
   @moduledoc """
   Attempt to push interrupts to CPU0 (i.e. away from the CPU we're running the
   audio thread on.)

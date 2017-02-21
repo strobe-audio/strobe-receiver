@@ -8,9 +8,9 @@ defmodule JanisInit do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(JanisInit.Cpu, [], restart: :transient),
+      worker(JanisInit.CPU, [], restart: :transient),
       worker(JanisInit.LED, [], restart: :transient),
-      worker(JanisInit.Eth, [], restart: :transient),
+      worker(JanisInit.ETH, [], restart: :transient),
       worker(JanisInit.Alsa, []),
       # worker(Task, [fn -> start_networking(:os.type, :eth0) end], restart: :transient),
       # worker(JanisInit.Dbus, []),
