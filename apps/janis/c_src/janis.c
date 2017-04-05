@@ -399,10 +399,47 @@ static ErlDrvData portaudio_drv_start(ErlDrvPort port, char *buff)
 
 	int src_error = 0;
 
-	// SRC_SINC_FASTEST
-	// SRC_SINC_MEDIUM_QUALITY
+	// These are the SRC/libsamplerate quality settings. (Sourced from
+	// http://www.mega-nerd.com/SRC/api_misc.html
+	// In theory we should be going woth `BEST_QUALITY` but in reality
+
+	// - none of the current crop of affordable ARM devices can actually
+	//   manage this quality setting
+	// - the level of resampling we're doing is extremely limited. We're
+	//   talking adding/dropping the occasional 22us frame.
+
+	// Personally I can hear no difference between `MEDIUM_QUALITY`,
+	// `FASTEST` and `ZERO_ORDER_HOLD`[1]. I'm going with `FASTEST` because it
+	// seems like the best compromise between fidelity and CPU/energy
+	// usage.
+
+	// [1] LINEAR, however, sounds bloody awful.
+
 	// SRC_SINC_BEST_QUALITY
-	context->resampler = src_callback_new(src_input_callback, SRC_SINC_MEDIUM_QUALITY, CHANNEL_COUNT, &src_error, context);
+	// This is a bandlimited interpolator derived from the mathematical
+	// sinc function and this is the highest quality sinc based converter,
+	// providing a worst case Signal-to-Noise Ratio (SNR) of 97 decibels
+	// (dB) at a bandwidth of 97%
+
+	// SRC_SINC_MEDIUM_QUALITY
+	// This is another bandlimited interpolator much like the previous one.
+	// It has an SNR of 97dB and a bandwidth of 90%. The speed of the
+	// conversion is much faster than the previous one.
+
+	// SRC_SINC_FASTEST
+	// This is the fastest bandlimited interpolator and has an SNR of 97dB
+	// and a bandwidth of 80%.
+
+	// SRC_ZERO_ORDER_HOLD
+	// A Zero Order Hold converter (interpolated value is equal to the last
+	// value). The quality is poor but the conversion speed is blindlingly
+	// fast.
+
+	// SRC_LINEAR
+	// A linear converter. Again the quality is poor, but the conversion
+	// speed is blindingly fast.
+
+	context->resampler = src_callback_new(src_input_callback, SRC_SINC_FASTEST, CHANNEL_COUNT, &src_error, context);
 
 	if (context->resampler == NULL && (src_error != 0)) {
 		printf("!! Error initializing resampler %d\r\n", src_error);
